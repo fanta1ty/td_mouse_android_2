@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">TD Mouse</string>
+    <string name="toshibar_transferjet_package_name">jp.co.toshiba.transferjetutility</string>
+    <string name="permission_required">Permission required</string>
+    <string name="permission_required_desc">The app need Bluetooth access to connect to TD Mouse</string>
+    <string name="bluetooth_disabled">Bluetooth disabled</string>
+    <string name="bluetooth_disabled_desc">Please enable Bluetooth to connect to TD Mouse</string>
+    <string name="bluetooth_device_undetected">Could not detect TD Mouse</string>
+    <string name="bluetooth_device_undetected_desc">Please pair TD Mouse in the Bluetooth Settings</string>
+    <string name="request_file">Request file</string>
+    <string name="request_file_desc">Do you want to receive %1$s from TD Mouse?</string>
+    <string name="transferjet_not_installed">Toshiba TransferJet is not installed</string>
+</resources>
