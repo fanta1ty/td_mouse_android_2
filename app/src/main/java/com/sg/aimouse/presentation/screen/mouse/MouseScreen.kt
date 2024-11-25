@@ -1,16 +1,15 @@
 @file:OptIn(ExperimentalMaterialApi::class)
 
-package com.sg.aimouse.presentation.screen.home
+package com.sg.aimouse.presentation.screen.mouse
 
-import android.content.Context
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.ExperimentalMaterialApi
@@ -30,29 +29,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
-import com.sg.aimouse.presentation.screen.home.component.HomeFileItem
-import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
+import com.sg.aimouse.presentation.component.FileItem
+import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
+import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
 import com.sg.aimouse.util.openAppPermissionSetting
-import com.sg.aimouse.util.viewModelFactory
 
 @Composable
-fun HomeScreen(innerPadding: PaddingValues) {
-    val stateHolder = rememberHomeStateHolder()
+fun MouseScreen(
+    innerPaddings: PaddingValues,
+    viewModel: HomeViewModel
+) {
+    val stateHolder = rememberMouseStateHolder(viewModel = viewModel)
     val viewModel = stateHolder.viewModel
     val bluetoothState by viewModel.getBluetoothState().collectAsState()
+    BackHandler(onBack = stateHolder::navigateBack)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)
+            .padding(innerPaddings)
             .pullRefresh(stateHolder.pullRefreshState)
     ) {
         when (bluetoothState) {
@@ -60,7 +62,7 @@ fun HomeScreen(innerPadding: PaddingValues) {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     val files = viewModel.getFiles()
                     itemsIndexed(items = files) { index, item ->
-                        HomeFileItem(item) { fileName -> stateHolder.showFileRequestDialog(fileName) }
+                        FileItem(item) { fileName -> stateHolder.showFileRequestDialog(fileName) }
 
                         if (index < files.lastIndex) {
                             HorizontalDivider(
@@ -115,7 +117,7 @@ fun HomeScreen(innerPadding: PaddingValues) {
             isCancellable = false,
             onPositiveClickEvent = {
                 stateHolder.dismissPermissionRequiredDialog()
-                openAppPermissionSetting(stateHolder.context)
+                openAppPermissionSetting(stateHolder.activity)
             },
             onDismissRequest = stateHolder::dismissPermissionRequiredDialog
         )
@@ -161,15 +163,14 @@ fun HomeScreen(innerPadding: PaddingValues) {
     }
 }
 
-@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun rememberHomeStateHolder(
-    context: Context = LocalContext.current,
-    viewModel: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(context) }),
+fun rememberMouseStateHolder(
+    activity: ComponentActivity = LocalActivity.current,
+    viewModel: HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
         onRefresh = { viewModel.sendCommand(CommandType.LIST_FILE) }
     )
-): HomeStateHolder {
-    return remember { HomeStateHolder(context, viewModel, pullRefreshState) }
+): MouseStateHolder {
+    return remember { MouseStateHolder(activity, viewModel, pullRefreshState) }
 }

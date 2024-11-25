@@ -1,6 +1,6 @@
 package com.sg.aimouse.model
 
-data class TDFile(
+data class File(
     val fileName: String,
     val isDirectory: Boolean = false
 )

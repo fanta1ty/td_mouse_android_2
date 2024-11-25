@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">TD Mouse</string>
+    <string name="from_phone">From Phone</string>
+    <string name="from_mouse">From TD Mouse</string>
+
     <string name="toshibar_transferjet_package_name">jp.co.toshiba.transferjetutility</string>
     <string name="permission_required">Permission required</string>
     <string name="permission_required_desc">The app need Bluetooth access to connect to TD Mouse</string>

@@ -1,4 +1,4 @@
-package com.sg.aimouse.presentation.screen.home.component
+package com.sg.aimouse.presentation.component
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Row
@@ -16,11 +16,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
-import com.sg.aimouse.model.TDFile
-import com.sg.aimouse.presentation.component.noRippleClickable
+import com.sg.aimouse.model.File
 
 @Composable
-fun HomeFileItem(file: TDFile, onClick: (String) -> Unit) {
+fun FileItem(file: File, onClick: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()

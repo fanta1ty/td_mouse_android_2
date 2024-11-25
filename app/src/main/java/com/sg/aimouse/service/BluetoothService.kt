@@ -9,7 +9,7 @@ import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.Response
-import com.sg.aimouse.model.TDFile
+import com.sg.aimouse.model.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,7 +39,7 @@ class BluetoothService(context: Context) {
     private val coroutineScope = CoroutineScope(Dispatchers.Default + Job())
     private val bluetoothState = MutableStateFlow(BluetoothState.DISCONNECTED)
     private var bluetoothState2 = BluetoothState.DISCONNECTED
-    private val files = mutableStateListOf<TDFile>()
+    private val files = mutableStateListOf<File>()
 
     fun connect() {
         connectThread?.cancel()
@@ -69,7 +69,7 @@ class BluetoothService(context: Context) {
 
     fun getBluetoothState() = bluetoothState.asStateFlow()
 
-    fun getFiles(): List<TDFile> = files
+    fun getFiles(): List<File> = files
 
     @Synchronized
     private fun connected(socket: BluetoothSocket) {
@@ -147,8 +147,8 @@ class BluetoothService(context: Context) {
                         val json = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
                         val response = Response.fromJSON(json)
                         files.clear()
-                        files.addAll(response.folder.map { TDFile(it, true) })
-                        files.addAll(response.files.map { TDFile(it) })
+                        files.addAll(response.folder.map { File(it, true) })
+                        files.addAll(response.files.map { File(it) })
                         Log.d(AiMouseSingleton.DEBUG_TAG, "read: $json")
                     }
                 } catch (e: IOException) {
