@@ -10,6 +10,7 @@ import androidx.navigation.NavHostController
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.navigation.Screen
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 class HomeStateHolder(
@@ -36,5 +37,17 @@ class HomeStateHolder(
 
     fun updateSelectedDrawerIndex(index: Int) {
         selectedDrawerIndex = index
+    }
+
+    fun onDrawerItemClick(index: Int) {
+        if (selectedDrawerIndex != index) {
+            navController.navigate(drawerItems[index].destination) {
+                popUpTo(
+                    drawerItems[selectedDrawerIndex].destination
+                ) { inclusive = true }
+            }
+            updateSelectedDrawerIndex(index)
+        }
+        coroutineScope.launch { drawerState.close() }
     }
 }

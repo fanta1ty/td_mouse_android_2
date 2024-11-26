@@ -11,7 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
-import com.sg.aimouse.presentation.screen.home.HomeViewModel
+import com.sg.aimouse.presentation.screen.mouse.MouseViewModel
 import com.sg.aimouse.service.CommandType
 import com.sg.aimouse.util.getRequiredPermissions
 import com.sg.aimouse.util.hasPermissions
@@ -20,7 +20,7 @@ import com.sg.aimouse.util.requestPermissions
 @OptIn(ExperimentalMaterialApi::class)
 class MouseStateHolder(
     val activity: ComponentActivity,
-    val viewModel: HomeViewModel,
+    val viewModel: MouseViewModel,
     val pullRefreshState: PullRefreshState
 ) {
     private val requiredPermissions = getRequiredPermissions()

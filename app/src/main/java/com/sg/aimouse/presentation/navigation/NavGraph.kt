@@ -8,8 +8,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.sg.aimouse.presentation.component.LocalNavController
-import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.MouseScreen
+import com.sg.aimouse.presentation.screen.mouse.MouseViewModel
 import com.sg.aimouse.presentation.screen.phone.PhoneScreen
 import com.sg.aimouse.util.sharedViewModel
 import com.sg.aimouse.util.viewModelFactory
@@ -31,9 +31,9 @@ fun NavGraph(
             }
 
             composable(route = Screen.MouseScreen.route) { entry ->
-                val sharedViewModel = entry.sharedViewModel<HomeViewModel>(
+                val sharedViewModel = entry.sharedViewModel<MouseViewModel>(
                     navController,
-                    viewModelFactory { HomeViewModel(context) }
+                    viewModelFactory { MouseViewModel(context) }
                 )
 
                 MouseScreen(innerPaddings, sharedViewModel)

@@ -1,4 +1,4 @@
-package com.sg.aimouse.presentation.screen.home
+package com.sg.aimouse.presentation.screen.mouse
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -9,7 +9,7 @@ import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
 import kotlinx.coroutines.launch
 
-class HomeViewModel(context: Context) : ViewModel() {
+class MouseViewModel(context: Context) : ViewModel() {
     private val bluetoothService = BluetoothService(context)
 
     init {
