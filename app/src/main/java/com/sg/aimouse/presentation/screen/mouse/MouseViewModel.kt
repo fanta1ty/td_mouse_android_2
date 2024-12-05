@@ -46,7 +46,7 @@ class MouseViewModel(context: Context) : ViewModel() {
     fun isBluetoothDeviceDetected() = bluetoothService.isBluetoothDeviceDetected()
 
     override fun onCleared() {
-        bluetoothService.release()
+        bluetoothService.close()
         super.onCleared()
     }
 }

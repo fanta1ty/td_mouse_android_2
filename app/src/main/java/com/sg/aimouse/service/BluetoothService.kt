@@ -1,22 +1,23 @@
 package com.sg.aimouse.service
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import com.sg.aimouse.common.AiMouseSingleton
-import com.sg.aimouse.model.Response
 import com.sg.aimouse.model.File
+import com.sg.aimouse.model.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -34,33 +35,56 @@ enum class CommandType {
 class BluetoothService(context: Context) {
     private val uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee")
     private var adapter = context.getSystemService(BluetoothManager::class.java).adapter
-    private var connectThread: ConnectThread? = null
-    private var connectedThread: ConnectedThread? = null
-    private val coroutineScope = CoroutineScope(Dispatchers.Default + Job())
+    private var connectJob: Job? = null
+    private var connectedJob: Job? = null
+    private var socket: BluetoothSocket? = null
+    private var inStream: InputStream? = null
+    private var outStream: OutputStream? = null
+    private val bluetoothStateMutex = Mutex()
     private val bluetoothState = MutableStateFlow(BluetoothState.DISCONNECTED)
-    private var bluetoothState2 = BluetoothState.DISCONNECTED
     private val files = mutableStateListOf<File>()
 
     fun connect() {
-        connectThread?.cancel()
-        connectThread = null
-        connectThread = ConnectThread(adapter.bondedDevices.toList()[0])
-        connectThread!!.start()
+        connectJob?.cancel()
+        connectJob = CoroutineScope(Dispatchers.IO).launch {
+            val devices = adapter.bondedDevices.toList()
+            updateBluetoothState(BluetoothState.CONNECTING)
+
+            for (device in devices) {
+                socket = try {
+                    device.createRfcommSocketToServiceRecord(uuid)
+                } catch (_: IOException) {
+                    null
+                }
+
+                if (socket != null) break
+            }
+
+            adapter.cancelDiscovery()
+            if (socket == null) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to create RFCOMM socket")
+                cancel()
+                return@launch
+            }
+
+            try {
+                socket!!.connect()
+                withContext(Dispatchers.Main) { connected(socket!!) }
+            } catch (e: IOException) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Bluetooth", e)
+                cancel()
+            }
+        }
     }
 
     fun close() {
-        connectThread?.cancel()
-        connectThread = null
-        connectedThread?.cancel()
-        connectedThread = null
-    }
-
-    fun release() {
-        coroutineScope.cancel()
+        connectJob?.cancel()
+        connectedJob?.cancel()
     }
 
     fun sendCommand(cmd: String) {
-        connectedThread?.write(cmd)
+        Log.d(AiMouseSingleton.DEBUG_TAG, "write cmd:: $cmd")
+        outStream?.write(cmd.toByteArray())
     }
 
     fun isBluetoothEnable() = adapter.isEnabled
@@ -71,77 +95,25 @@ class BluetoothService(context: Context) {
 
     fun getFiles(): List<File> = files
 
-    @Synchronized
     private fun connected(socket: BluetoothSocket) {
-        connectedThread?.cancel()
-        connectedThread = null
-        connectedThread = ConnectedThread(socket)
-        connectedThread!!.start()
-    }
+        connectedJob?.cancel()
+        connectedJob = CoroutineScope(Dispatchers.IO).launch {
 
-    private fun updateBluetoothState(newState: BluetoothState) {
-        bluetoothState2 = newState
-        coroutineScope.launch { bluetoothState.emit(newState) }
-    }
-
-    internal inner class ConnectThread(device: BluetoothDevice) : Thread() {
-        private var socket: BluetoothSocket? = null
-
-        init {
-            socket = try {
-                updateBluetoothState(BluetoothState.CONNECTING)
-                device.createRfcommSocketToServiceRecord(uuid)
-            } catch (e: IOException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to create RFCOMM socket", e)
-                cancel()
-                null
-            }
-        }
-
-        override fun run() {
-            adapter.cancelDiscovery()
-            if (socket == null) return
-
-            try {
-                socket!!.connect()
-                connected(socket!!)
-            } catch (e: IOException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Bluetooth", e)
-                cancel()
-            }
-        }
-
-        fun cancel() {
-            try {
-                socket?.close()
-            } catch (e: IOException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close socket", e)
-            }
-
-            updateBluetoothState(BluetoothState.DISCONNECTED)
-        }
-    }
-
-    internal inner class ConnectedThread(private val socket: BluetoothSocket) : Thread() {
-        private var inStream: InputStream? = null
-        private var outStream: OutputStream? = null
-
-        init {
             try {
                 inStream = socket.inputStream
                 outStream = socket.outputStream
             } catch (e: IOException) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open stream", e)
+                cancel()
+                return@launch
             }
-        }
 
-        override fun run() {
             updateBluetoothState(BluetoothState.CONNECTED)
             var buffer = ByteArray(1024)
 
-            while (bluetoothState2 == BluetoothState.CONNECTED) {
+            while (bluetoothState.value == BluetoothState.CONNECTED) {
                 try {
-                    val byteCount = inStream!!.read(buffer)
+                    val byteCount = inStream?.read(buffer) ?: 0
 
                     if (byteCount > 0) {
                         val json = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
@@ -157,22 +129,21 @@ class BluetoothService(context: Context) {
                 }
             }
         }
+    }
 
-        fun write(cmd: String) {
-            Log.d(AiMouseSingleton.DEBUG_TAG, "write cmd:: $cmd")
-            outStream?.write(cmd.toByteArray())
+    private suspend fun cancel() {
+        try {
+            inStream?.close()
+            outStream?.close()
+            socket?.close()
+        } catch (e: IOException) {
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close socket", e)
         }
 
-        fun cancel() {
-            try {
-                inStream?.close()
-                outStream?.close()
-                socket.close()
-            } catch (e: IOException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close socket", e)
-            }
+        updateBluetoothState(BluetoothState.DISCONNECTED)
+    }
 
-            updateBluetoothState(BluetoothState.DISCONNECTED)
-        }
+    private suspend fun updateBluetoothState(newState: BluetoothState) {
+        bluetoothStateMutex.withLock { bluetoothState.value = newState }
     }
 }
