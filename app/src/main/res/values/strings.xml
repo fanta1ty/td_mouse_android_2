@@ -5,7 +5,8 @@
 
     <string name="toshibar_transferjet_package_name">jp.co.toshiba.transferjetutility</string>
     <string name="permission_required">Permission required</string>
-    <string name="permission_required_desc">The app need Bluetooth access to connect to TD Mouse</string>
+    <string name="bluetooth_permission_required_desc">The app need Bluetooth access to connect to TD Mouse. Please grant the permissions in the Settings</string>
+    <string name="storage_permission_required_desc">The app need Storage access to display files on your phone. Please grant the permissions in the Settings</string>
     <string name="bluetooth_disabled">Bluetooth disabled</string>
     <string name="bluetooth_disabled_desc">Please enable Bluetooth to connect to TD Mouse</string>
     <string name="bluetooth_device_undetected">Could not detect TD Mouse</string>

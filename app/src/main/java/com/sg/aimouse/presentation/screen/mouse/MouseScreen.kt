@@ -35,6 +35,7 @@ import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
@@ -43,10 +44,9 @@ import com.sg.aimouse.util.openAppPermissionSetting
 @Composable
 fun MouseScreen(
     innerPaddings: PaddingValues,
-    viewModel: MouseViewModel
+    viewModel: HomeViewModel
 ) {
     val stateHolder = rememberMouseStateHolder(viewModel = viewModel)
-    val viewModel = stateHolder.viewModel
     val bluetoothState by viewModel.getBluetoothState().collectAsState()
     BackHandler(onBack = stateHolder::navigateBack)
 
@@ -112,7 +112,7 @@ fun MouseScreen(
     if (stateHolder.shouldShowPermissionRequiredDialog) {
         Dialog(
             title = stringResource(R.string.permission_required),
-            content = stringResource(R.string.permission_required_desc),
+            content = stringResource(R.string.bluetooth_permission_required_desc),
             isCancellable = false,
             onPositiveClickEvent = {
                 stateHolder.dismissPermissionRequiredDialog()
@@ -165,7 +165,7 @@ fun MouseScreen(
 @Composable
 fun rememberMouseStateHolder(
     activity: ComponentActivity = LocalActivity.current,
-    viewModel: MouseViewModel,
+    viewModel: HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
         onRefresh = { viewModel.sendCommand(CommandType.LIST_FILE) }

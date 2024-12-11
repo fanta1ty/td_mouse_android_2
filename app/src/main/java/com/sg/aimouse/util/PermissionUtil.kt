@@ -14,12 +14,23 @@ import com.karumi.dexter.PermissionToken
 import com.karumi.dexter.listener.PermissionRequest
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener
 
-fun getRequiredPermissions(): List<String> {
+fun getRequiredBluetoothPermissions(): List<String> {
     val permissions = mutableListOf<String>()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         permissions.add(Manifest.permission.BLUETOOTH_SCAN)
         permissions.add(Manifest.permission.BLUETOOTH_CONNECT)
+    }
+
+    return permissions
+}
+
+fun getRequiredStoragePermissions(): List<String> {
+    val permissions = mutableListOf<String>()
+
+    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+        permissions.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        permissions.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 
     return permissions
@@ -72,11 +83,11 @@ fun requestPermissions(
         }).check()
 }
 
-fun openAppPermissionSetting(context: Context) {
-    val intent = Intent(
-        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-        Uri.parse("package:${context.packageName}")
-    )
+fun openAppPermissionSetting(
+    context: Context,
+    action: String = Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+) {
+    val intent = Intent(action, Uri.parse("package:${context.packageName}"))
     intent.addCategory(Intent.CATEGORY_DEFAULT)
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     context.startActivity(intent)
