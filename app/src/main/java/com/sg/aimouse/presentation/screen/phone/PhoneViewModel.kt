@@ -6,11 +6,11 @@ import com.sg.aimouse.model.File
 
 class PhoneViewModel(context: Context) : ViewModel() {
     private val _files = mutableListOf(
-        File("DCIM", true),
-        File("Download", true),
-        File("Movies", true),
-        File("Music", true),
-        File("Pictures", true)
+        File("DCIM", isDirectory = true),
+        File("Download", isDirectory = true),
+        File("Movies", isDirectory = true),
+        File("Music", isDirectory = true),
+        File("Pictures", isDirectory = true)
     )
     val files: List<File> = _files
 }

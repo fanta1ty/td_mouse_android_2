@@ -2,6 +2,8 @@
 
 package com.sg.aimouse.presentation.screen.mouse
 
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -39,7 +41,6 @@ import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.util.openAppPermissionSetting
 
 @Composable
 fun MouseScreen(
@@ -109,14 +110,38 @@ fun MouseScreen(
         }
     }
 
-    if (stateHolder.shouldShowPermissionRequiredDialog) {
+    if (stateHolder.shouldShowBluetoothPermissionRequiredDialog) {
         Dialog(
             title = stringResource(R.string.permission_required),
             content = stringResource(R.string.bluetooth_permission_required_desc),
             isCancellable = false,
             onPositiveClickEvent = {
-                stateHolder.dismissPermissionRequiredDialog()
-                openAppPermissionSetting(stateHolder.activity)
+                stateHolder.apply {
+                    dismissPermissionRequiredDialog()
+                    openAppPermissionSetting(activity)
+                }
+            },
+            onDismissRequest = stateHolder::dismissPermissionRequiredDialog
+        )
+        return
+    }
+
+    if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
+        Dialog(
+            title = stringResource(R.string.permission_required),
+            content = stringResource(R.string.storage_permission_required_desc),
+            isCancellable = false,
+            onPositiveClickEvent = {
+                stateHolder.apply {
+                    dismissPermissionRequiredDialog()
+
+                    val action = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+                    else
+                        Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
+
+                    openAppPermissionSetting(activity, action)
+                }
             },
             onDismissRequest = stateHolder::dismissPermissionRequiredDialog
         )

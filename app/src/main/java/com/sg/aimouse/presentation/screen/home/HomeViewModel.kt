@@ -46,7 +46,7 @@ class HomeViewModel(context: Context) : ViewModel() {
     fun isBluetoothDeviceDetected() = bluetoothService.isBluetoothDeviceDetected()
 
     override fun onCleared() {
-        bluetoothService.close()
+        bluetoothService.close(isRelease = true)
         super.onCleared()
     }
 }

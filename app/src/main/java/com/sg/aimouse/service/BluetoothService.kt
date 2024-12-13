@@ -12,6 +12,7 @@ import com.sg.aimouse.model.Response
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -34,7 +35,8 @@ enum class CommandType {
 @SuppressLint("MissingPermission")
 class BluetoothService(context: Context) {
     private val uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee")
-    private var adapter = context.getSystemService(BluetoothManager::class.java).adapter
+    private val adapter = context.getSystemService(BluetoothManager::class.java).adapter
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private var connectJob: Job? = null
     private var connectedJob: Job? = null
     private var socket: BluetoothSocket? = null
@@ -46,7 +48,7 @@ class BluetoothService(context: Context) {
 
     fun connect() {
         connectJob?.cancel()
-        connectJob = CoroutineScope(Dispatchers.IO).launch {
+        connectJob = coroutineScope.launch {
             val devices = adapter.bondedDevices.toList()
             updateBluetoothState(BluetoothState.CONNECTING)
 
@@ -63,7 +65,7 @@ class BluetoothService(context: Context) {
             adapter.cancelDiscovery()
             if (socket == null) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to create RFCOMM socket")
-                cancel()
+                this@BluetoothService.cancel()
                 return@launch
             }
 
@@ -72,14 +74,18 @@ class BluetoothService(context: Context) {
                 withContext(Dispatchers.Main) { connected(socket!!) }
             } catch (e: IOException) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Bluetooth", e)
-                cancel()
+                this@BluetoothService.cancel()
             }
         }
     }
 
-    fun close() {
+    fun close(isRelease: Boolean = false) {
         connectJob?.cancel()
         connectedJob?.cancel()
+
+        if (isRelease) {
+            coroutineScope.cancel()
+        }
     }
 
     fun sendCommand(cmd: String) {
@@ -97,35 +103,56 @@ class BluetoothService(context: Context) {
 
     private fun connected(socket: BluetoothSocket) {
         connectedJob?.cancel()
-        connectedJob = CoroutineScope(Dispatchers.IO).launch {
+        connectedJob = coroutineScope.launch {
 
             try {
                 inStream = socket.inputStream
                 outStream = socket.outputStream
             } catch (e: IOException) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open stream", e)
-                cancel()
+                this@BluetoothService.cancel()
                 return@launch
             }
 
             updateBluetoothState(BluetoothState.CONNECTED)
-            var buffer = ByteArray(1024)
+            val buffer = ByteArray(1024)
+            var combinedBuffer = byteArrayOf()
 
             while (bluetoothState.value == BluetoothState.CONNECTED) {
                 try {
                     val byteCount = inStream?.read(buffer) ?: 0
 
                     if (byteCount > 0) {
-                        val json = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
-                        val response = Response.fromJSON(json)
-                        files.clear()
-                        files.addAll(response.folder.map { File(it, true) })
-                        files.addAll(response.files.map { File(it) })
-                        Log.d(AiMouseSingleton.DEBUG_TAG, "read: $json")
+                        val msg = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
+                        //Log.d(AiMouseSingleton.DEBUG_TAG, "msg: $msg")
+
+                        if (msg == "EOF") {
+                            combinedBuffer = byteArrayOf()
+                        } else if (msg == "EOJSON") {
+                            val json = String(combinedBuffer, Charsets.UTF_8)
+                            val response = Response.fromJSON(json)
+
+                            val files = mutableListOf<File>()
+                            files.addAll(response.folders.map { File(it) })
+                            files.addAll(response.files.map { File(it.name, it.size) })
+
+                            withContext(Dispatchers.Main) {
+                                this@BluetoothService.files.clear()
+                                this@BluetoothService.files.addAll(files)
+                            }
+
+                            combinedBuffer = byteArrayOf()
+                        } else {
+                            val tempBuffer = ByteArray(byteCount)
+                            buffer.copyInto(
+                                destination = tempBuffer, startIndex = 0, endIndex = byteCount
+                            )
+                            combinedBuffer += tempBuffer
+                        }
                     }
                 } catch (e: IOException) {
                     Log.e(AiMouseSingleton.DEBUG_TAG, "Input stream failed", e)
-                    cancel()
+                    this@BluetoothService.cancel()
                 }
             }
         }

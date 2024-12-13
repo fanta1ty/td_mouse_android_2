@@ -1,4 +1,4 @@
-package com.sg.aimouse.service
+package com.sg.aimouse.service.implementation
 
 import android.content.Context
 import androidx.compose.runtime.mutableStateListOf

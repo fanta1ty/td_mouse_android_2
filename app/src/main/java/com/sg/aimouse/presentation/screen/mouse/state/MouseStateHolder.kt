@@ -1,6 +1,7 @@
 package com.sg.aimouse.presentation.screen.mouse.state
 
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -13,20 +14,21 @@ import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.util.getRequiredBluetoothPermissions
-import com.sg.aimouse.util.hasPermissions
-import com.sg.aimouse.util.requestPermissions
+import com.sg.aimouse.service.PermissionService
+import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 @OptIn(ExperimentalMaterialApi::class)
 class MouseStateHolder(
     val activity: ComponentActivity,
     val viewModel: HomeViewModel,
     val pullRefreshState: PullRefreshState
-) {
-    private val requiredPermissions = getRequiredBluetoothPermissions()
+) : PermissionService by PermissionServiceImpl() {
+
     private var currentSelectedFile = ""
 
-    var shouldShowPermissionRequiredDialog by mutableStateOf(false)
+    var shouldShowBluetoothPermissionRequiredDialog by mutableStateOf(false)
+        private set
+    var shouldShowStoragePermissionRequiredDialog by mutableStateOf(false)
         private set
     var shouldShowBluetoothRequiredDialog by mutableStateOf(false)
         private set
@@ -36,13 +38,25 @@ class MouseStateHolder(
         private set
 
     fun connect() {
-        if (!hasPermissions(activity, requiredPermissions)) {
-            requestPermissions(
+        if (!hasBluetoothPermission(activity)) {
+            requestBluetoothPermission(
                 activity,
-                requiredPermissions,
                 permissionsGrantedListener = { connect() },
-                permissionsDeniedListener = { shouldShowPermissionRequiredDialog = true }
+                permissionsDeniedListener = { shouldShowBluetoothPermissionRequiredDialog = true }
             )
+            return
+        }
+
+        if (!hasStoragePermission(activity)) {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+                requestStoragePermission(
+                    activity,
+                    permissionsGrantedListener = { connect() },
+                    permissionsDeniedListener = { shouldShowStoragePermissionRequiredDialog = true }
+                )
+            } else {
+                shouldShowStoragePermissionRequiredDialog = true
+            }
             return
         }
 
@@ -96,7 +110,7 @@ class MouseStateHolder(
     }
 
     fun dismissPermissionRequiredDialog() {
-        shouldShowPermissionRequiredDialog = false
+        shouldShowBluetoothPermissionRequiredDialog = false
     }
 
     fun dismissBluetoothRequiredDialog() {
