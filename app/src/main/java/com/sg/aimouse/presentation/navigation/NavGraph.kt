@@ -11,7 +11,6 @@ import com.sg.aimouse.presentation.component.LocalNavController
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.MouseScreen
 import com.sg.aimouse.presentation.screen.phone.PhoneScreen
-import com.sg.aimouse.presentation.screen.phone.PhoneViewModel
 import com.sg.aimouse.util.sharedViewModel
 import com.sg.aimouse.util.viewModelFactory
 
@@ -28,8 +27,8 @@ fun NavGraph(
             startDestination = Screen.PhoneScreen.route
         ) {
             composable(route = Screen.PhoneScreen.route) { entry ->
-                val sharedViewModel = entry.sharedViewModel<PhoneViewModel>(
-                    navController, viewModelFactory { PhoneViewModel(context) }
+                val sharedViewModel = entry.sharedViewModel<HomeViewModel>(
+                    navController, viewModelFactory { HomeViewModel(context) }
                 )
 
                 PhoneScreen(innerPaddings, sharedViewModel)

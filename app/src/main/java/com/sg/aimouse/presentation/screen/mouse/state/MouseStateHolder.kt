@@ -12,6 +12,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
+import com.sg.aimouse.model.File
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.service.CommandType
 import com.sg.aimouse.service.PermissionService
@@ -24,7 +25,7 @@ class MouseStateHolder(
     val pullRefreshState: PullRefreshState
 ) : PermissionService by PermissionServiceImpl() {
 
-    private var currentSelectedFile = ""
+    private var currentSelectedFile: File? = null
 
     var shouldShowBluetoothPermissionRequiredDialog by mutableStateOf(false)
         private set
@@ -73,9 +74,59 @@ class MouseStateHolder(
         viewModel.connect()
     }
 
-    fun openToshibaTransferJet() {
-        viewModel.sendCommand(CommandType.DOWNLOAD_FILE, currentSelectedFile)
+    fun transferFile() {
+        if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
+            viewModel.sendCommand(
+                CommandType.RECEIVE_FILE_BLUETOOTH,
+                currentSelectedFile!!.fileName
+            )
+        } else {
+            viewModel.sendCommand(
+                CommandType.RECEIVE_FILE_TRANSFERJET,
+                currentSelectedFile!!.fileName
+            )
+            openToshibaTransferJet()
+        }
+    }
 
+    fun showFileRequestDialog(file: File) {
+        currentSelectedFile = file
+        shouldShowFileRequestDialog = true
+    }
+
+    fun getFileRequestDialogDescription(): String {
+        return if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
+            activity.getString(R.string.request_file_bluetooth_desc)
+        } else {
+            activity.getString(R.string.request_file_transferjet_desc)
+        }
+    }
+
+    fun dismissBluetoothPermissionRequiredDialog() {
+        shouldShowBluetoothPermissionRequiredDialog = false
+    }
+
+    fun dismissStoragePermissionRequiredDialog() {
+        shouldShowStoragePermissionRequiredDialog = false
+    }
+
+    fun dismissBluetoothRequiredDialog() {
+        shouldShowBluetoothRequiredDialog = false
+    }
+
+    fun dismissBluetoothDeviceUndetectedDialog() {
+        shouldShowBluetoothDeviceUndetectedDialog = false
+    }
+
+    fun dismissFileRequestDialog() {
+        shouldShowFileRequestDialog = false
+    }
+
+    fun navigateBack() {
+        activity.moveTaskToBack(true)
+    }
+
+    private fun openToshibaTransferJet() {
         val packageName = activity.getString(R.string.toshibar_transferjet_package_name)
         val isAppInstalled = try {
             activity.packageManager.getPackageInfo(packageName, 0)
@@ -98,34 +149,5 @@ class MouseStateHolder(
                 activity.startActivity(it)
             }
         }
-    }
-
-    fun showFileRequestDialog(fileName: String) {
-        currentSelectedFile = fileName
-        shouldShowFileRequestDialog = true
-    }
-
-    fun getFileRequestDialogDescription(): String {
-        return String.format(activity.getString(R.string.request_file_desc), currentSelectedFile)
-    }
-
-    fun dismissPermissionRequiredDialog() {
-        shouldShowBluetoothPermissionRequiredDialog = false
-    }
-
-    fun dismissBluetoothRequiredDialog() {
-        shouldShowBluetoothRequiredDialog = false
-    }
-
-    fun dismissBluetoothDeviceUndetectedDialog() {
-        shouldShowBluetoothDeviceUndetectedDialog = false
-    }
-
-    fun dismissFileRequestDialog() {
-        shouldShowFileRequestDialog = false
-    }
-
-    fun navigateBack() {
-        activity.moveTaskToBack(true)
     }
 }

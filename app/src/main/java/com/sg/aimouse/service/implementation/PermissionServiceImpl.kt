@@ -17,8 +17,8 @@ import com.sg.aimouse.service.PermissionService
 
 class PermissionServiceImpl() : PermissionService {
 
-    val requiredStoragePermissions = getRequiredStoragePermission()
-    val requiredBluetoothPermissions = getRequiredBluetoothPermission()
+    private val requiredStoragePermissions = getRequiredStoragePermission()
+    private val requiredBluetoothPermissions = getRequiredBluetoothPermission()
 
     override fun hasStoragePermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {

@@ -19,13 +19,13 @@ import com.sg.aimouse.R
 import com.sg.aimouse.model.File
 
 @Composable
-fun FileItem(file: File, onClick: (String) -> Unit) {
+fun FileItem(file: File, onClick: (File) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
             .padding(horizontal = 8.dp)
-            .noRippleClickable { onClick(file.fileName) },
+            .noRippleClickable { onClick(file) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
@@ -41,6 +41,6 @@ fun FileItem(file: File, onClick: (String) -> Unit) {
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        Text(file.fileName)
+        Text(file.shortenFileName)
     }
 }

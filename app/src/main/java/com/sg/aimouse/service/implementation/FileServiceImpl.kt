@@ -1,15 +1,79 @@
 package com.sg.aimouse.service.implementation
 
 import android.content.Context
+import android.os.Environment
+import android.widget.Toast
 import androidx.compose.runtime.mutableStateListOf
+import com.sg.aimouse.R
 import com.sg.aimouse.model.File
+import com.sg.aimouse.service.FileService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.File as JavaFile
 
-class FileServiceImpl(private val context: Context) {
-    val files = mutableStateListOf<File>()
-    var currentPath = ""
-        private set
+class FileServiceImpl : FileService {
 
-    fun getLocalFiles(path: String) {
+    private val files = mutableStateListOf<File>()
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    override fun getLocalFiles() = files
+
+    override fun retrieveLocalFiles() {
+        coroutineScope.launch {
+            val downloadDir = Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS
+            )
+
+            if (downloadDir.exists() && downloadDir.isDirectory) {
+                val localFiles = downloadDir.listFiles()?.map { file ->
+                    File(file.name, file.length(), file.isDirectory)
+                } ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    files.clear()
+                    files.addAll(localFiles)
+                }
+            }
+        }
+    }
+
+    override fun saveFile(context: Context, data: ByteArray, fileName: String) {
+        val downloadDir = Environment.getExternalStoragePublicDirectory(
+            Environment.DIRECTORY_DOWNLOADS
+        )
+
+        if (downloadDir == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.save_file_error),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
+
+        downloadDir?.let { dir ->
+            val file = JavaFile(dir, fileName)
+
+            try {
+                FileOutputStream(file).use { output -> output.write(data) }
+
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.save_file_succeeded),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: IOException) {
+                e.printStackTrace()
+
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.save_file_error),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 }

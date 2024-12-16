@@ -12,6 +12,12 @@
     <string name="bluetooth_device_undetected">Could not detect TD Mouse</string>
     <string name="bluetooth_device_undetected_desc">Please pair TD Mouse in the Bluetooth Settings</string>
     <string name="request_file">Request file</string>
-    <string name="request_file_desc">Do you want to receive %1$s from TD Mouse?</string>
+    <string name="request_file_bluetooth_desc">This file size is less than 2Mb. Do you want receive this file via Bluetooth?</string>
+    <string name="request_file_transferjet_desc">This file size is more than 2Mb. Do you want receive this file via TransferJet?</string>
+    <string name="send_file">Send file</string>
+    <string name="send_file_bluetooth_desc">This file size is less than 2Mb. Do you want send this file via Bluetooth?</string>
+    <string name="send_file_transferjet_desc">This file size is more than 2Mb. Do you want send this file via TransferJet?</string>
     <string name="transferjet_not_installed">Toshiba TransferJet is not installed</string>
+    <string name="save_file_succeeded">File saved to Download folder</string>
+    <string name="save_file_error">Failed to save file</string>
 </resources>

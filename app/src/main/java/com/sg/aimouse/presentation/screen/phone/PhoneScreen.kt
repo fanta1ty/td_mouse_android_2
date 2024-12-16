@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterialApi::class)
+
 package com.sg.aimouse.presentation.screen.phone
 
 import android.widget.Toast
@@ -10,6 +12,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshState
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -23,10 +28,11 @@ import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.phone.state.PhoneStateHolder
 
 @Composable
-fun PhoneScreen(innerPaddings: PaddingValues, viewModel: PhoneViewModel) {
+fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
     val stateHolder = rememberPhoneStateHolder(viewModel = viewModel)
     BackHandler(onBack = stateHolder::navigateBack)
 
@@ -35,10 +41,10 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: PhoneViewModel) {
             .fillMaxSize()
             .padding(innerPaddings)
     ) {
-        when (stateHolder.isStoragePermissionGranted) {
+        when (stateHolder.shouldShowLocalFileList) {
             true -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    itemsIndexed(items = viewModel.files) { index, item ->
+                    itemsIndexed(items = viewModel.getLocalFiles()) { index, item ->
                         FileItem(item) { _ ->
                             Toast.makeText(
                                 stateHolder.activity,
@@ -47,7 +53,7 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: PhoneViewModel) {
                             ).show()
                         }
 
-                        if (index < viewModel.files.lastIndex) {
+                        if (index < viewModel.getLocalFiles().lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(8.dp),
                                 thickness = 1.dp
@@ -70,22 +76,80 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: PhoneViewModel) {
         }
     }
 
-    if (stateHolder.shouldShowPermissionRequiredDialog) {
+    if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
         Dialog(
             title = stringResource(R.string.permission_required),
             content = stringResource(R.string.storage_permission_required_desc),
             isCancellable = false,
             onPositiveClickEvent = stateHolder::navigateToSettings,
-            onDismissRequest = stateHolder::dismissPermissionRequiredDialog
+            onDismissRequest = stateHolder::dismissStoragePermissionRequiredDialog
         )
         return
+    }
+
+    if (stateHolder.shouldShowBluetoothPermissionRequiredDialog) {
+        Dialog(
+            title = stringResource(R.string.permission_required),
+            content = stringResource(R.string.bluetooth_permission_required_desc),
+            isCancellable = false,
+            onPositiveClickEvent = {
+                stateHolder.apply {
+                    dismissBluetoothPermissionRequiredDialog()
+                    openAppPermissionSetting(activity)
+                }
+            },
+            onDismissRequest = stateHolder::dismissBluetoothPermissionRequiredDialog
+        )
+        return
+    }
+
+    if (stateHolder.shouldShowBluetoothRequiredDialog) {
+        Dialog(
+            title = stringResource(R.string.bluetooth_disabled),
+            content = stringResource(R.string.bluetooth_disabled_desc),
+            isCancellable = false,
+            onPositiveClickEvent = {
+                stateHolder.dismissBluetoothRequiredDialog()
+                stateHolder.getFiles()
+            },
+            onDismissRequest = stateHolder::dismissBluetoothRequiredDialog
+        )
+        return
+    }
+
+    if (stateHolder.shouldShowBluetoothDeviceUndetectedDialog) {
+        Dialog(
+            title = stringResource(R.string.bluetooth_device_undetected),
+            content = stringResource(R.string.bluetooth_device_undetected_desc),
+            isCancellable = false,
+            onPositiveClickEvent = {
+                stateHolder.dismissBluetoothDeviceUndetectedDialog()
+                stateHolder.getFiles()
+            },
+            onDismissRequest = stateHolder::dismissBluetoothDeviceUndetectedDialog
+        )
+        return
+    }
+
+    if (stateHolder.shouldShowFileSendingConfirmationDialog) {
+        Dialog(
+            title = stringResource(R.string.send_file),
+            content = stateHolder.getFileSendingConfirmationDialogDescription(),
+            onPositiveClickEvent = { },
+            onNegativeClickEvent = stateHolder::dismissFileSendingConfirmationDialog,
+            onDismissRequest = stateHolder::dismissFileSendingConfirmationDialog
+        )
     }
 }
 
 @Composable
 fun rememberPhoneStateHolder(
     activity: ComponentActivity = LocalActivity.current,
-    viewModel: PhoneViewModel
+    viewModel: HomeViewModel,
+    pullRefreshState: PullRefreshState = rememberPullRefreshState(
+        refreshing = false,
+        onRefresh = { viewModel.retrieveLocalFiles() }
+    )
 ): PhoneStateHolder {
-    return remember { PhoneStateHolder(activity, viewModel) }
+    return remember { PhoneStateHolder(activity, viewModel, pullRefreshState) }
 }

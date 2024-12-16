@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.File
 import com.sg.aimouse.model.Response
+import com.sg.aimouse.service.implementation.FileServiceImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,11 +30,11 @@ enum class BluetoothState {
 }
 
 enum class CommandType {
-    LIST_FILE, DOWNLOAD_FILE
+    LIST_FILE, RECEIVE_FILE_TRANSFERJET, RECEIVE_FILE_BLUETOOTH
 }
 
 @SuppressLint("MissingPermission")
-class BluetoothService(context: Context) {
+class BluetoothService(private val context: Context) : FileService by FileServiceImpl() {
     private val uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee")
     private val adapter = context.getSystemService(BluetoothManager::class.java).adapter
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
@@ -127,6 +128,7 @@ class BluetoothService(context: Context) {
                         //Log.d(AiMouseSingleton.DEBUG_TAG, "msg: $msg")
 
                         if (msg == "EOF") {
+                            saveFile(context, combinedBuffer, "")
                             combinedBuffer = byteArrayOf()
                         } else if (msg == "EOJSON") {
                             val json = String(combinedBuffer, Charsets.UTF_8)

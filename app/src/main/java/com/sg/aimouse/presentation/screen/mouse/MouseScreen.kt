@@ -60,9 +60,9 @@ fun MouseScreen(
         when (bluetoothState) {
             BluetoothState.CONNECTED -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    val files = viewModel.getFiles()
+                    val files = viewModel.getTDMouseFiles()
                     itemsIndexed(items = files) { index, item ->
-                        FileItem(item) { fileName -> stateHolder.showFileRequestDialog(fileName) }
+                        FileItem(item) { file -> stateHolder.showFileRequestDialog(file) }
 
                         if (index < files.lastIndex) {
                             HorizontalDivider(
@@ -117,11 +117,11 @@ fun MouseScreen(
             isCancellable = false,
             onPositiveClickEvent = {
                 stateHolder.apply {
-                    dismissPermissionRequiredDialog()
+                    dismissBluetoothPermissionRequiredDialog()
                     openAppPermissionSetting(activity)
                 }
             },
-            onDismissRequest = stateHolder::dismissPermissionRequiredDialog
+            onDismissRequest = stateHolder::dismissBluetoothPermissionRequiredDialog
         )
         return
     }
@@ -133,7 +133,7 @@ fun MouseScreen(
             isCancellable = false,
             onPositiveClickEvent = {
                 stateHolder.apply {
-                    dismissPermissionRequiredDialog()
+                    dismissStoragePermissionRequiredDialog()
 
                     val action = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
                         Settings.ACTION_APPLICATION_DETAILS_SETTINGS
@@ -143,7 +143,7 @@ fun MouseScreen(
                     openAppPermissionSetting(activity, action)
                 }
             },
-            onDismissRequest = stateHolder::dismissPermissionRequiredDialog
+            onDismissRequest = stateHolder::dismissStoragePermissionRequiredDialog
         )
         return
     }
@@ -180,7 +180,7 @@ fun MouseScreen(
         Dialog(
             title = stringResource(R.string.request_file),
             content = stateHolder.getFileRequestDialogDescription(),
-            onPositiveClickEvent = stateHolder::openToshibaTransferJet,
+            onPositiveClickEvent = stateHolder::transferFile,
             onNegativeClickEvent = stateHolder::dismissFileRequestDialog,
             onDismissRequest = stateHolder::dismissFileRequestDialog
         )
