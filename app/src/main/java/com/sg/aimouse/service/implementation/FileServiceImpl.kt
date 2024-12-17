@@ -30,7 +30,8 @@ class FileServiceImpl : FileService {
 
             if (downloadDir.exists() && downloadDir.isDirectory) {
                 val localFiles = downloadDir.listFiles()?.map { file ->
-                    File(file.name, file.length(), file.isDirectory)
+                    val size = if (!file.isDirectory) file.length() else 0
+                    File(file.name, size, file.isDirectory)
                 } ?: emptyList()
 
                 withContext(Dispatchers.Main) {

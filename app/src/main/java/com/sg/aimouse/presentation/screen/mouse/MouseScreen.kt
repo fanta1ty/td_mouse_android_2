@@ -2,8 +2,6 @@
 
 package com.sg.aimouse.presentation.screen.mouse
 
-import android.os.Build
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -131,18 +129,7 @@ fun MouseScreen(
             title = stringResource(R.string.permission_required),
             content = stringResource(R.string.storage_permission_required_desc),
             isCancellable = false,
-            onPositiveClickEvent = {
-                stateHolder.apply {
-                    dismissStoragePermissionRequiredDialog()
-
-                    val action = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q)
-                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-                    else
-                        Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION
-
-                    openAppPermissionSetting(activity, action)
-                }
-            },
+            onPositiveClickEvent = stateHolder::navigateToSettings,
             onDismissRequest = stateHolder::dismissStoragePermissionRequiredDialog
         )
         return

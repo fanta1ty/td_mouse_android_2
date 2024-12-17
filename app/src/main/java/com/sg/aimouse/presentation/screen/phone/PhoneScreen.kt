@@ -2,7 +2,6 @@
 
 package com.sg.aimouse.presentation.screen.phone
 
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -45,12 +44,10 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
             true -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(items = viewModel.getLocalFiles()) { index, item ->
-                        FileItem(item) { _ ->
-                            Toast.makeText(
-                                stateHolder.activity,
-                                "Currently in development",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                        FileItem(item) { file ->
+                            if (!file.isDirectory) {
+                                stateHolder.showFileSendingConfirmationDialog(file)
+                            }
                         }
 
                         if (index < viewModel.getLocalFiles().lastIndex) {
@@ -135,7 +132,7 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
         Dialog(
             title = stringResource(R.string.send_file),
             content = stateHolder.getFileSendingConfirmationDialogDescription(),
-            onPositiveClickEvent = { },
+            onPositiveClickEvent = stateHolder::sendFile,
             onNegativeClickEvent = stateHolder::dismissFileSendingConfirmationDialog,
             onDismissRequest = stateHolder::dismissFileSendingConfirmationDialog
         )

@@ -17,49 +17,56 @@ import com.sg.aimouse.service.PermissionService
 
 class PermissionServiceImpl() : PermissionService {
 
-    private val requiredStoragePermissions = getRequiredStoragePermission()
-    private val requiredBluetoothPermissions = getRequiredBluetoothPermission()
+    private val _requiredStoragePermissions = getRequiredStoragePermission()
+    private val _requiredBluetoothPermissions = getRequiredBluetoothPermission()
+
+    override val requiredStoragePermissions: List<String>
+        get() = _requiredStoragePermissions
+    override val requiredBluetoothPermissions: List<String>
+        get() = _requiredBluetoothPermissions
 
     override fun hasStoragePermission(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            hasPermissions(context, requiredStoragePermissions)
+            hasPermissions(context, _requiredStoragePermissions)
         } else {
             Environment.isExternalStorageManager()
         }
     }
 
     override fun hasBluetoothPermission(context: Context): Boolean {
-        return if (requiredBluetoothPermissions.isEmpty()) {
+        return if (_requiredBluetoothPermissions.isEmpty()) {
             true
         } else {
-            hasPermissions(context, requiredBluetoothPermissions)
+            hasPermissions(context, _requiredBluetoothPermissions)
         }
     }
 
-    override fun requestStoragePermission(
+    override fun requestPermissions(
         context: Context,
+        permissions: List<String>,
         permissionsGrantedListener: (() -> Unit)?,
         permissionsDeniedListener: (() -> Unit)?
     ) {
-        requestPermissions(
-            context,
-            requiredStoragePermissions,
-            permissionsGrantedListener,
-            permissionsDeniedListener
-        )
-    }
+        Dexter.withContext(context)
+            .withPermissions(permissions)
+            .withListener(object : MultiplePermissionsListener {
+                override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
+                    if (report == null) return
 
-    override fun requestBluetoothPermission(
-        context: Context,
-        permissionsGrantedListener: (() -> Unit)?,
-        permissionsDeniedListener: (() -> Unit)?
-    ) {
-        requestPermissions(
-            context,
-            requiredBluetoothPermissions,
-            permissionsGrantedListener,
-            permissionsDeniedListener
-        )
+                    if (report.areAllPermissionsGranted()) {
+                        permissionsGrantedListener?.invoke()
+                    } else {
+                        permissionsDeniedListener?.invoke()
+                    }
+                }
+
+                override fun onPermissionRationaleShouldBeShown(
+                    requestList: MutableList<PermissionRequest>?,
+                    token: PermissionToken?
+                ) {
+                    token?.continuePermissionRequest()
+                }
+            }).check()
     }
 
     override fun openAppPermissionSetting(context: Context, action: String) {
@@ -111,33 +118,5 @@ class PermissionServiceImpl() : PermissionService {
         }
 
         return isGranted
-    }
-
-    private fun requestPermissions(
-        context: Context,
-        permissions: List<String>,
-        permissionsGrantedListener: (() -> Unit)?,
-        permissionsDeniedListener: (() -> Unit)?
-    ) {
-        Dexter.withContext(context)
-            .withPermissions(permissions)
-            .withListener(object : MultiplePermissionsListener {
-                override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
-                    if (report == null) return
-
-                    if (report.areAllPermissionsGranted()) {
-                        permissionsGrantedListener?.invoke()
-                    } else {
-                        permissionsDeniedListener?.invoke()
-                    }
-                }
-
-                override fun onPermissionRationaleShouldBeShown(
-                    requestList: MutableList<PermissionRequest>?,
-                    token: PermissionToken?
-                ) {
-                    token?.continuePermissionRequest()
-                }
-            }).check()
     }
 }

@@ -37,19 +37,11 @@ class PhoneStateHolder(
         private set
 
     fun getFiles() {
-//        if (!hasBluetoothPermission(activity)) {
-//            requestBluetoothPermission(
-//                activity,
-//                permissionsGrantedListener = { getFiles() },
-//                permissionsDeniedListener = { shouldShowBluetoothPermissionRequiredDialog = true }
-//            )
-//            return
-//        }
-
         if (!hasStoragePermission(activity)) {
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-                requestStoragePermission(
+                requestPermissions(
                     activity,
+                    requiredStoragePermissions,
                     permissionsGrantedListener = { getFiles() },
                     permissionsDeniedListener = { shouldShowStoragePermissionRequiredDialog = true }
                 )
@@ -59,6 +51,16 @@ class PhoneStateHolder(
             return
         }
 
+//        if (!hasBluetoothPermission(activity)) {
+//            requestPermissions(
+//                activity,
+//                requiredBluetoothPermissions,
+//                permissionsGrantedListener = { getFiles() },
+//                permissionsDeniedListener = { shouldShowBluetoothPermissionRequiredDialog = true }
+//            )
+//            return
+//        }
+//
 //        if (!viewModel.isBluetoothEnabled()) {
 //            shouldShowBluetoothRequiredDialog = true
 //            return
@@ -73,11 +75,20 @@ class PhoneStateHolder(
         shouldShowLocalFileList = true
     }
 
+    fun sendFile() {
+
+    }
+
+    fun showFileSendingConfirmationDialog(file: File) {
+        currentSelectedFile = file
+        shouldShowFileSendingConfirmationDialog = true
+    }
+
     fun getFileSendingConfirmationDialogDescription(): String {
         return if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
-            activity.getString(R.string.request_file_bluetooth_desc)
+            activity.getString(R.string.send_file_bluetooth_desc)
         } else {
-            activity.getString(R.string.request_file_transferjet_desc)
+            activity.getString(R.string.send_file_transferjet_desc)
         }
     }
 

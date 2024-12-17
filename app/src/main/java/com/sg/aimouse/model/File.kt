@@ -1,8 +1,12 @@
 package com.sg.aimouse.model
 
-import kotlin.math.round
+import java.util.Locale
 
-data class File(val fileName: String, val size: Long = 0, val isDirectory: Boolean = false) {
+data class File(
+    val fileName: String,
+    val size: Long = 0,
+    val isDirectory: Boolean = false
+) {
     val shortenFileName: String
     val formatedFileSize: String
 
@@ -44,19 +48,18 @@ data class File(val fileName: String, val size: Long = 0, val isDirectory: Boole
     }
 
     private fun formatedFileSize(): String {
+        if (isDirectory) return ""
+
         val digit = size.toString().length
 
-        return if (digit > 9) { // Gb
-            val formatedSize = round(size.toDouble() / (1024 * 1024 * 1024))
-            if (formatedSize > 1) "$formatedSize Gb" else "$formatedSize Gbs"
-        } else if (digit > 6) { // Mb
-            val formatedSize = round(size.toDouble() / (1024 * 1024))
-            if (formatedSize > 1) "$formatedSize Mb" else "$formatedSize Mbs"
-        } else if (digit > 3) { // Kb
-            val formatedSize = size.toDouble() / 1024
-            if (formatedSize > 1) "$formatedSize Kb" else "$formatedSize Kbs"
-        } else { // byte
-            if (size > 1) "$size byte" else "$size bytes"
+        return if (digit > 9) { // GB
+            String.format(Locale.US, "%.2f GB", size.toDouble() / (1024 * 1024 * 1024))
+        } else if (digit > 6) { // MB
+            String.format(Locale.US, "%.2f MB", size.toDouble() / (1024 * 1024))
+        } else if (digit > 3) { // KB
+            String.format(Locale.US, "%.0f KB", size.toDouble() / 1024)
+        } else { // Byte
+            if (size > 1.0) "$size Bytes" else "$size Byte"
         }
     }
 }
