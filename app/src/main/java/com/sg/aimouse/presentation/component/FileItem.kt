@@ -34,9 +34,9 @@ fun FileItem(file: File, onClick: (File) -> Unit) {
         Image(
             modifier = Modifier.size(30.dp),
             painter = if (!file.isDirectory) {
-                painterResource(R.drawable.icon_document)
+                painterResource(R.drawable.ic_file)
             } else {
-                painterResource(R.drawable.icon_folder)
+                painterResource(R.drawable.ic_folder)
             },
             contentDescription = null,
             contentScale = ContentScale.Fit

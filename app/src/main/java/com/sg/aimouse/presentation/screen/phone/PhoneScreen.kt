@@ -43,14 +43,14 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
         when (stateHolder.shouldShowLocalFileList) {
             true -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    itemsIndexed(items = viewModel.getLocalFiles()) { index, item ->
+                    itemsIndexed(items = viewModel.localFiles) { index, item ->
                         FileItem(item) { file ->
                             if (!file.isDirectory) {
                                 stateHolder.showFileSendingConfirmationDialog(file)
                             }
                         }
 
-                        if (index < viewModel.getLocalFiles().lastIndex) {
+                        if (index < viewModel.localFiles.lastIndex) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(8.dp),
                                 thickness = 1.dp

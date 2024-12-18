@@ -17,10 +17,11 @@ import java.io.File as JavaFile
 
 class FileServiceImpl : FileService {
 
-    private val files = mutableStateListOf<File>()
-    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private val _localFiles = mutableStateListOf<File>()
+    override val localFiles: List<File>
+        get() = _localFiles
 
-    override fun getLocalFiles() = files
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun retrieveLocalFiles() {
         coroutineScope.launch {
@@ -35,8 +36,8 @@ class FileServiceImpl : FileService {
                 } ?: emptyList()
 
                 withContext(Dispatchers.Main) {
-                    files.clear()
-                    files.addAll(localFiles)
+                    _localFiles.clear()
+                    _localFiles.addAll(localFiles)
                 }
             }
         }

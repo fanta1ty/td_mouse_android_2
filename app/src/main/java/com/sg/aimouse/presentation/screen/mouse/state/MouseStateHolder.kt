@@ -74,17 +74,17 @@ class MouseStateHolder(
             return
         }
 
-        viewModel.connect()
+        viewModel.connectBluetooth()
     }
 
     fun transferFile() {
         if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
-            viewModel.sendCommand(
+            viewModel.sendBluetoothCommand(
                 CommandType.RECEIVE_FILE_BLUETOOTH,
                 currentSelectedFile!!.fileName
             )
         } else {
-            viewModel.sendCommand(
+            viewModel.sendBluetoothCommand(
                 CommandType.RECEIVE_FILE_TRANSFERJET,
                 currentSelectedFile!!.fileName
             )

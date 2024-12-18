@@ -5,7 +5,7 @@ import com.sg.aimouse.model.File
 
 interface FileService {
 
-    fun getLocalFiles(): List<File>
+    val localFiles: List<File>
 
     fun retrieveLocalFiles()
 

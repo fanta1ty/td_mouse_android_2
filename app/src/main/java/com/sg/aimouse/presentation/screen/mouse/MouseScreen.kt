@@ -46,7 +46,7 @@ fun MouseScreen(
     viewModel: HomeViewModel
 ) {
     val stateHolder = rememberMouseStateHolder(viewModel = viewModel)
-    val bluetoothState by viewModel.getBluetoothState().collectAsState()
+    val bluetoothState by viewModel.bluetoothState.collectAsState()
     BackHandler(onBack = stateHolder::navigateBack)
 
     Box(
@@ -58,7 +58,7 @@ fun MouseScreen(
         when (bluetoothState) {
             BluetoothState.CONNECTED -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    val files = viewModel.getTDMouseFiles()
+                    val files = viewModel.tdMouseFiles
                     itemsIndexed(items = files) { index, item ->
                         FileItem(item) { file -> stateHolder.showFileRequestDialog(file) }
 
@@ -180,7 +180,7 @@ fun rememberMouseStateHolder(
     viewModel: HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
-        onRefresh = { viewModel.sendCommand(CommandType.LIST_FILE) }
+        onRefresh = { viewModel.sendBluetoothCommand(CommandType.LIST_FILE) }
     )
 ): MouseStateHolder {
     return remember { MouseStateHolder(activity, viewModel, pullRefreshState) }
