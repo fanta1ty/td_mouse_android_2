@@ -9,12 +9,14 @@ import androidx.compose.runtime.setValue
 import androidx.navigation.NavHostController
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.navigation.Screen
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 class HomeStateHolder(
     val context: Context,
+    val viewModel: HomeViewModel,
     val navController: NavHostController,
     val coroutineScope: CoroutineScope,
     val drawerState: DrawerState

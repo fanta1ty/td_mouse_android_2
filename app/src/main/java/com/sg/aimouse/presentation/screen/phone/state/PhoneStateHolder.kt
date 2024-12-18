@@ -33,8 +33,6 @@ class PhoneStateHolder(
         private set
     var shouldShowFileSendingConfirmationDialog by mutableStateOf(false)
         private set
-    var shouldShowLocalFileList by mutableStateOf(false)
-        private set
 
     fun getFiles() {
         if (!hasStoragePermission(activity)) {
@@ -72,7 +70,7 @@ class PhoneStateHolder(
 //        }
 
         viewModel.retrieveLocalFiles()
-        shouldShowLocalFileList = true
+        viewModel.updateShouldShowLocalFileList(true)
     }
 
     fun sendFile() {

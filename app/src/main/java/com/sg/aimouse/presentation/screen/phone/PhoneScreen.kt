@@ -5,17 +5,19 @@ package com.sg.aimouse.presentation.screen.phone
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.PullRefreshState
+import androidx.compose.material.pullrefresh.pullRefresh
 import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -27,20 +29,22 @@ import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.phone.state.PhoneStateHolder
 
 @Composable
-fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
-    val stateHolder = rememberPhoneStateHolder(viewModel = viewModel)
+fun PhoneScreen() {
+    val stateHolder = rememberPhoneStateHolder()
+    val viewModel = stateHolder.viewModel
     BackHandler(onBack = stateHolder::navigateBack)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPaddings)
+            .pullRefresh(stateHolder.pullRefreshState)
     ) {
-        when (stateHolder.shouldShowLocalFileList) {
+        when (viewModel.shouldShowLocalFileList) {
             true -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     itemsIndexed(items = viewModel.localFiles) { index, item ->
@@ -58,6 +62,13 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
                         }
                     }
                 }
+
+                PullRefreshIndicator(
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    refreshing = false,
+                    state = stateHolder.pullRefreshState,
+                    contentColor = MaterialTheme.colorScheme.primary
+                )
             }
 
             false -> {
@@ -66,9 +77,7 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
                         .fillMaxWidth(0.7f)
                         .align(Alignment.Center),
                     onClick = stateHolder::getFiles
-                ) {
-                    Text("Get local files")
-                }
+                ) { Text(stringResource(R.string.get_local_files)) }
             }
         }
     }
@@ -142,7 +151,7 @@ fun PhoneScreen(innerPaddings: PaddingValues, viewModel: HomeViewModel) {
 @Composable
 fun rememberPhoneStateHolder(
     activity: ComponentActivity = LocalActivity.current,
-    viewModel: HomeViewModel,
+    viewModel: HomeViewModel = LocalParentViewModel.current as HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
         onRefresh = { viewModel.retrieveLocalFiles() }

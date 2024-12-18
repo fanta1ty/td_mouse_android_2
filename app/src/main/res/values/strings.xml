@@ -20,4 +20,6 @@
     <string name="transferjet_not_installed">Toshiba TransferJet is not installed</string>
     <string name="save_file_succeeded">File saved to Download folder</string>
     <string name="save_file_error">Failed to save file</string>
+    <string name="get_local_files">Get local files</string>
+    <string name="connect_td_mouse">Connect TD Mouse</string>
 </resources>

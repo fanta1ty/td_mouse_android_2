@@ -3,7 +3,10 @@ package com.sg.aimouse.service.implementation
 import android.content.Context
 import android.os.Environment
 import android.widget.Toast
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.FileService
@@ -16,6 +19,10 @@ import java.io.IOException
 import java.io.File as JavaFile
 
 class FileServiceImpl : FileService {
+
+    private var _shouldShowLocalFileList by mutableStateOf(false)
+    override val shouldShowLocalFileList: Boolean
+        get() = _shouldShowLocalFileList
 
     private val _localFiles = mutableStateListOf<File>()
     override val localFiles: List<File>
@@ -77,5 +84,9 @@ class FileServiceImpl : FileService {
                 ).show()
             }
         }
+    }
+
+    override fun updateShouldShowLocalFileList(isShow: Boolean) {
+        _shouldShowLocalFileList = isShow
     }
 }

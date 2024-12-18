@@ -5,7 +5,6 @@ package com.sg.aimouse.presentation.screen.mouse
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -35,24 +34,22 @@ import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
 
 @Composable
-fun MouseScreen(
-    innerPaddings: PaddingValues,
-    viewModel: HomeViewModel
-) {
-    val stateHolder = rememberMouseStateHolder(viewModel = viewModel)
+fun MouseScreen() {
+    val stateHolder = rememberMouseStateHolder()
+    val viewModel = stateHolder.viewModel
     val bluetoothState by viewModel.bluetoothState.collectAsState()
     BackHandler(onBack = stateHolder::navigateBack)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPaddings)
             .pullRefresh(stateHolder.pullRefreshState)
     ) {
         when (bluetoothState) {
@@ -85,9 +82,7 @@ fun MouseScreen(
                         .fillMaxWidth(0.7f)
                         .align(Alignment.Center),
                     onClick = stateHolder::connect
-                ) {
-                    Text("Connect TD Mouse")
-                }
+                ) { Text(stringResource(R.string.connect_td_mouse)) }
             }
 
             BluetoothState.CONNECTING -> {
@@ -177,7 +172,7 @@ fun MouseScreen(
 @Composable
 fun rememberMouseStateHolder(
     activity: ComponentActivity = LocalActivity.current,
-    viewModel: HomeViewModel,
+    viewModel: HomeViewModel = LocalParentViewModel.current as HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
         onRefresh = { viewModel.sendBluetoothCommand(CommandType.LIST_FILE) }
