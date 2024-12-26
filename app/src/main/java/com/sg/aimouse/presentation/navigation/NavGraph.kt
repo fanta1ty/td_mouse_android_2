@@ -17,10 +17,10 @@ fun NavGraph(innerPaddings: PaddingValues) {
     NavHost(
         modifier = Modifier.padding(innerPaddings),
         navController = navController,
-        startDestination = Screen.PhoneScreen.route
+        startDestination = Screen.MouseScreen.route
     ) {
-        composable(route = Screen.PhoneScreen.route) { PhoneScreen() }
-
         composable(route = Screen.MouseScreen.route) { MouseScreen() }
+
+        composable(route = Screen.PhoneScreen.route) { PhoneScreen() }
     }
 }

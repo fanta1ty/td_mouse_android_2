@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">TD Mouse</string>
-    <string name="from_phone">From Phone</string>
-    <string name="from_mouse">From TD Mouse</string>
+    <string name="files_on_local">Files on Local</string>
+    <string name="files_on_tdmouse">Files on TDMouse</string>
 
     <string name="toshibar_transferjet_package_name">jp.co.toshiba.transferjetutility</string>
     <string name="permission_required">Permission required</string>
@@ -22,4 +22,6 @@
     <string name="save_file_error">Failed to save file</string>
     <string name="get_local_files">Get local files</string>
     <string name="connect_td_mouse">Connect TD Mouse</string>
+    <string name="loading">Loading</string>
+    <string name="transferring_file">Transferring file.</string>
 </resources>

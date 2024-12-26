@@ -5,11 +5,17 @@ import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
 import android.content.Context
 import android.util.Log
+import android.widget.Toast
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.File
 import com.sg.aimouse.model.Request
 import com.sg.aimouse.model.Response
+import com.sg.aimouse.service.BluetoothResponseType
 import com.sg.aimouse.service.BluetoothService
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
@@ -18,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +36,8 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
+import kotlin.text.toByteArray
+import java.io.File as JavaFile
 
 @SuppressLint("MissingPermission")
 class BluetoothServiceImpl(
@@ -44,7 +53,8 @@ class BluetoothServiceImpl(
     private var socket: BluetoothSocket? = null
     private var inStream: InputStream? = null
     private var outStream: OutputStream? = null
-    private var selectedFileName = ""
+    private var selectedTDMouseFile: File? = null
+    private var responseType = BluetoothResponseType.JSON
 
     private val bluetoothStateMutex = Mutex()
     private val _bluetoothState = MutableStateFlow(BluetoothState.DISCONNECTED)
@@ -54,6 +64,10 @@ class BluetoothServiceImpl(
     private val _tdMouseFiles = mutableStateListOf<File>()
     override val tdMouseFiles: List<File>
         get() = _tdMouseFiles
+
+    private var _isTransferringFile by mutableStateOf(false)
+    override val isTransferringFile: Boolean
+        get() = _isTransferringFile
     //endregion
 
     override fun isBluetoothEnabled() = adapter.isEnabled
@@ -102,18 +116,69 @@ class BluetoothServiceImpl(
         }
     }
 
-    override fun sendBluetoothCommand(commandType: CommandType, fileName: String) {
-        val cmd = when (commandType) {
-            CommandType.LIST_FILE -> Request("filelist").toJSON()
-            CommandType.RECEIVE_FILE_TRANSFERJET -> Request("sendfile", fileName).toJSON()
-            CommandType.RECEIVE_FILE_BLUETOOTH -> {
-                selectedFileName = fileName
-                Request("send_BTfile", fileName).toJSON()
+    override fun sendBluetoothCommand(
+        commandType: CommandType,
+        file: File?,
+        responseType: BluetoothResponseType
+    ) {
+        this.responseType = responseType
+
+        coroutineScope.launch {
+            when (commandType) {
+                CommandType.LIST_FILE -> {
+                    val cmd = Request("filelist").toJSON()
+                    outStream?.write(cmd.toByteArray())
+                }
+
+                CommandType.SEND_FILE_TRANSFERJET -> {
+                    val cmd = Request("receive_TXJfile").toJSON()
+                    outStream?.write(cmd.toByteArray())
+                }
+
+                CommandType.RECEIVE_FILE_TRANSFERJET -> {
+                    if (file == null) return@launch
+                    selectedTDMouseFile = file
+                    val cmd = Request("sendfile", file.fileName).toJSON()
+                    outStream?.write(cmd.toByteArray())
+                }
+
+                CommandType.RECEIVE_FILE_BLUETOOTH -> {
+                    if (file == null) return@launch
+                    _isTransferringFile = true
+                    selectedTDMouseFile = file
+                    val cmd = Request("send_BTfile", file.fileName).toJSON()
+                    outStream?.write(cmd.toByteArray())
+                }
             }
         }
+    }
 
-        Log.d(AiMouseSingleton.DEBUG_TAG, "bluetooth write: $cmd")
-        outStream?.write(cmd.toByteArray())
+    override fun sendFileViaBluetooth(file: File) {
+        coroutineScope.launch {
+            _isTransferringFile = true
+            val cmd = Request("receive_BTfile", file.fileName, file.size).toJSON()
+            outStream?.write(cmd.toByteArray())
+
+
+            delay(5000)
+
+            try {
+                val javaFile = JavaFile(file.path)
+                val data = javaFile.readBytes()
+                outStream?.write(data)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "File sent successfully", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "File failed to send", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            _isTransferringFile = false
+        }
     }
 
     private fun connected(socket: BluetoothSocket) {
@@ -130,7 +195,7 @@ class BluetoothServiceImpl(
             }
 
             updateBluetoothState(BluetoothState.CONNECTED)
-            val buffer = ByteArray(1024)
+            val buffer = ByteArray(2 * 1024 * 1024)
             var combinedBuffer = byteArrayOf()
 
             while (_bluetoothState.value == BluetoothState.CONNECTED) {
@@ -138,32 +203,56 @@ class BluetoothServiceImpl(
                     val byteCount = inStream?.read(buffer) ?: 0
 
                     if (byteCount > 0) {
-                        val msg = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
-                        //Log.d(AiMouseSingleton.DEBUG_TAG, "msg: $msg")
-
-                        if (msg == "EOF") {
-                            saveFile(context, combinedBuffer, selectedFileName)
-                            combinedBuffer = byteArrayOf()
-                        } else if (msg == "EOJSON") {
-                            val json = String(combinedBuffer, Charsets.UTF_8)
-                            val response = Response.fromJSON(json)
-
-                            val files = mutableListOf<File>()
-                            files.addAll(response.folders.map { File(it, isDirectory = true) })
-                            files.addAll(response.files.map { File(it.name, it.size) })
-
-                            withContext(Dispatchers.Main) {
-                                this@BluetoothServiceImpl._tdMouseFiles.clear()
-                                this@BluetoothServiceImpl._tdMouseFiles.addAll(files)
-                            }
-
-                            combinedBuffer = byteArrayOf()
-                        } else {
+                        if (responseType == BluetoothResponseType.FILE) {
                             val tempBuffer = ByteArray(byteCount)
                             buffer.copyInto(
                                 destination = tempBuffer, startIndex = 0, endIndex = byteCount
                             )
                             combinedBuffer += tempBuffer
+
+                            if (combinedBuffer.size.toLong() == selectedTDMouseFile!!.size) {
+                                saveFile(context, combinedBuffer, selectedTDMouseFile!!.fileName)
+                                combinedBuffer = byteArrayOf()
+
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.save_file_succeeded),
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
+                                _isTransferringFile = false
+                            }
+                        } else {
+                            val msg = String(buffer, Charsets.UTF_8).substring(0..byteCount - 1)
+                            if (msg == "EOJSON") {
+                                val json = String(combinedBuffer, Charsets.UTF_8)
+
+                                val response = Response.fromJSON(json)
+
+                                val files = mutableListOf<File>()
+                                files.addAll(response.folders.map {
+                                    File(
+                                        it,
+                                        isDirectory = true
+                                    )
+                                })
+                                files.addAll(response.files.map { File(it.name, it.size) })
+
+                                withContext(Dispatchers.Main) {
+                                    this@BluetoothServiceImpl._tdMouseFiles.clear()
+                                    this@BluetoothServiceImpl._tdMouseFiles.addAll(files)
+                                }
+
+                                combinedBuffer = byteArrayOf()
+                            } else {
+                                val tempBuffer = ByteArray(byteCount)
+                                buffer.copyInto(
+                                    destination = tempBuffer, startIndex = 0, endIndex = byteCount
+                                )
+                                combinedBuffer += tempBuffer
+                            }
                         }
                     }
                 } catch (e: IOException) {

@@ -5,6 +5,7 @@ import java.util.Locale
 data class File(
     val fileName: String,
     val size: Long = 0,
+    val path: String = "",
     val isDirectory: Boolean = false
 ) {
     val shortenFileName: String

@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterialApi::class)
 class HomeStateHolder(
-    val context: Context,
+    context: Context,
     val viewModel: HomeViewModel,
     val navController: NavHostController,
     val coroutineScope: CoroutineScope,
@@ -26,14 +26,14 @@ class HomeStateHolder(
 
     val drawerItems = listOf<DrawerItem>(
         DrawerItem(
-            Screen.PhoneScreen.route,
-            context.getString(R.string.from_phone),
-            R.drawable.ic_phone
+            Screen.MouseScreen.route,
+            context.getString(R.string.files_on_tdmouse),
+            R.drawable.ic_mouse
         ),
         DrawerItem(
-            Screen.MouseScreen.route,
-            context.getString(R.string.from_mouse),
-            R.drawable.ic_mouse
+            Screen.PhoneScreen.route,
+            context.getString(R.string.files_on_local),
+            R.drawable.ic_phone
         )
     )
 

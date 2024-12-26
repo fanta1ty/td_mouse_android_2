@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
+import com.sg.aimouse.presentation.component.LoadingDialog
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
@@ -57,7 +58,7 @@ fun MouseScreen() {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
                     val files = viewModel.tdMouseFiles
                     itemsIndexed(items = files) { index, item ->
-                        FileItem(item) { file -> stateHolder.showFileRequestDialog(file) }
+                        FileItem(item) { file -> stateHolder.onFileItemClick(file) }
 
                         if (index < files.lastIndex) {
                             HorizontalDivider(
@@ -161,10 +162,17 @@ fun MouseScreen() {
     if (stateHolder.shouldShowFileRequestDialog) {
         Dialog(
             title = stringResource(R.string.request_file),
-            content = stateHolder.getFileRequestDialogDescription(),
+            content = stringResource(R.string.request_file_transferjet_desc),
             onPositiveClickEvent = stateHolder::transferFile,
             onNegativeClickEvent = stateHolder::dismissFileRequestDialog,
             onDismissRequest = stateHolder::dismissFileRequestDialog
+        )
+    }
+
+    if (viewModel.isTransferringFile) {
+        LoadingDialog(
+            title = stringResource(R.string.loading),
+            content = stringResource(R.string.transferring_file)
         )
     }
 }

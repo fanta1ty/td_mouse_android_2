@@ -39,7 +39,7 @@ class FileServiceImpl : FileService {
             if (downloadDir.exists() && downloadDir.isDirectory) {
                 val localFiles = downloadDir.listFiles()?.map { file ->
                     val size = if (!file.isDirectory) file.length() else 0
-                    File(file.name, size, file.isDirectory)
+                    File(file.name, size, file.path, file.isDirectory)
                 } ?: emptyList()
 
                 withContext(Dispatchers.Main) {
@@ -68,12 +68,6 @@ class FileServiceImpl : FileService {
 
             try {
                 FileOutputStream(file).use { output -> output.write(data) }
-
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.save_file_succeeded),
-                    Toast.LENGTH_SHORT
-                ).show()
             } catch (e: IOException) {
                 e.printStackTrace()
 

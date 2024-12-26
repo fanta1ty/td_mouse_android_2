@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
+import com.sg.aimouse.presentation.component.LoadingDialog
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
@@ -50,7 +51,7 @@ fun PhoneScreen() {
                     itemsIndexed(items = viewModel.localFiles) { index, item ->
                         FileItem(item) { file ->
                             if (!file.isDirectory) {
-                                stateHolder.showFileSendingConfirmationDialog(file)
+                                stateHolder.onFileItemClick(file)
                             }
                         }
 
@@ -140,10 +141,17 @@ fun PhoneScreen() {
     if (stateHolder.shouldShowFileSendingConfirmationDialog) {
         Dialog(
             title = stringResource(R.string.send_file),
-            content = stateHolder.getFileSendingConfirmationDialogDescription(),
+            content = stringResource(R.string.send_file_transferjet_desc),
             onPositiveClickEvent = stateHolder::sendFile,
             onNegativeClickEvent = stateHolder::dismissFileSendingConfirmationDialog,
             onDismissRequest = stateHolder::dismissFileSendingConfirmationDialog
+        )
+    }
+
+    if (viewModel.isTransferringFile) {
+        LoadingDialog(
+            title = stringResource(R.string.loading),
+            content = stringResource(R.string.transferring_file)
         )
     }
 }

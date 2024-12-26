@@ -8,12 +8,17 @@ enum class BluetoothState {
 }
 
 enum class CommandType {
-    LIST_FILE, RECEIVE_FILE_TRANSFERJET, RECEIVE_FILE_BLUETOOTH
+    LIST_FILE, SEND_FILE_TRANSFERJET, RECEIVE_FILE_TRANSFERJET, RECEIVE_FILE_BLUETOOTH
+}
+
+enum class BluetoothResponseType {
+    FILE, JSON
 }
 
 interface BluetoothService {
     val bluetoothState: StateFlow<BluetoothState>
     val tdMouseFiles: List<File>
+    val isTransferringFile: Boolean
 
     fun isBluetoothEnabled(): Boolean
 
@@ -23,5 +28,11 @@ interface BluetoothService {
 
     fun closeBluetoothConnection(isRelease: Boolean = false)
 
-    fun sendBluetoothCommand(commandType: CommandType, fileName: String = "")
+    fun sendBluetoothCommand(
+        commandType: CommandType,
+        file: File? = null,
+        responseType: BluetoothResponseType = BluetoothResponseType.JSON
+    )
+
+    fun sendFileViaBluetooth(file: File)
 }

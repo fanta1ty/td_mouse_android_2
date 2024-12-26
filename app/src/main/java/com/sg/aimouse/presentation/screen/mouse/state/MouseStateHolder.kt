@@ -15,6 +15,7 @@ import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.File
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
+import com.sg.aimouse.service.BluetoothResponseType
 import com.sg.aimouse.service.CommandType
 import com.sg.aimouse.service.PermissionService
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
@@ -78,30 +79,29 @@ class MouseStateHolder(
     }
 
     fun transferFile() {
+        dismissFileRequestDialog()
         if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
             viewModel.sendBluetoothCommand(
                 CommandType.RECEIVE_FILE_BLUETOOTH,
-                currentSelectedFile!!.fileName
+                currentSelectedFile,
+                BluetoothResponseType.FILE
             )
         } else {
             viewModel.sendBluetoothCommand(
                 CommandType.RECEIVE_FILE_TRANSFERJET,
-                currentSelectedFile!!.fileName
+                currentSelectedFile
             )
             openToshibaTransferJet()
         }
     }
 
-    fun showFileRequestDialog(file: File) {
+    fun onFileItemClick(file: File) {
         currentSelectedFile = file
-        shouldShowFileRequestDialog = true
-    }
 
-    fun getFileRequestDialogDescription(): String {
-        return if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
-            activity.getString(R.string.request_file_bluetooth_desc)
+        if (!file.shouldTransferViaBluetooth()) {
+            shouldShowFileRequestDialog = true
         } else {
-            activity.getString(R.string.request_file_transferjet_desc)
+            transferFile()
         }
     }
 
