@@ -1,6 +1,8 @@
 package com.sg.aimouse.presentation.screen.mouse.state
 
 import android.content.pm.PackageManager
+import android.os.Build
+import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -11,22 +13,25 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
-import com.sg.aimouse.presentation.screen.mouse.MouseViewModel
+import com.sg.aimouse.model.File
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
+import com.sg.aimouse.service.BluetoothResponseType
 import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.util.getRequiredPermissions
-import com.sg.aimouse.util.hasPermissions
-import com.sg.aimouse.util.requestPermissions
+import com.sg.aimouse.service.PermissionService
+import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 @OptIn(ExperimentalMaterialApi::class)
 class MouseStateHolder(
     val activity: ComponentActivity,
-    val viewModel: MouseViewModel,
+    val viewModel: HomeViewModel,
     val pullRefreshState: PullRefreshState
-) {
-    private val requiredPermissions = getRequiredPermissions()
-    private var currentSelectedFile = ""
+) : PermissionService by PermissionServiceImpl() {
 
-    var shouldShowPermissionRequiredDialog by mutableStateOf(false)
+    private var currentSelectedFile: File? = null
+
+    var shouldShowBluetoothPermissionRequiredDialog by mutableStateOf(false)
+        private set
+    var shouldShowStoragePermissionRequiredDialog by mutableStateOf(false)
         private set
     var shouldShowBluetoothRequiredDialog by mutableStateOf(false)
         private set
@@ -36,13 +41,27 @@ class MouseStateHolder(
         private set
 
     fun connect() {
-        if (!hasPermissions(activity, requiredPermissions)) {
+        if (!hasBluetoothPermission(activity)) {
             requestPermissions(
                 activity,
-                requiredPermissions,
+                requiredBluetoothPermissions,
                 permissionsGrantedListener = { connect() },
-                permissionsDeniedListener = { shouldShowPermissionRequiredDialog = true }
+                permissionsDeniedListener = { shouldShowBluetoothPermissionRequiredDialog = true }
             )
+            return
+        }
+
+        if (!hasStoragePermission(activity)) {
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+                requestPermissions(
+                    activity,
+                    requiredStoragePermissions,
+                    permissionsGrantedListener = { connect() },
+                    permissionsDeniedListener = { shouldShowStoragePermissionRequiredDialog = true }
+                )
+            } else {
+                shouldShowStoragePermissionRequiredDialog = true
+            }
             return
         }
 
@@ -56,12 +75,73 @@ class MouseStateHolder(
             return
         }
 
-        viewModel.connect()
+        viewModel.connectBluetooth()
     }
 
-    fun openToshibaTransferJet() {
-        viewModel.sendCommand(CommandType.DOWNLOAD_FILE, currentSelectedFile)
+    fun transferFile() {
+        dismissFileRequestDialog()
+        if (currentSelectedFile!!.shouldTransferViaBluetooth()) {
+            viewModel.sendBluetoothCommand(
+                CommandType.RECEIVE_FILE_BLUETOOTH,
+                currentSelectedFile,
+                BluetoothResponseType.FILE
+            )
+        } else {
+            viewModel.sendBluetoothCommand(
+                CommandType.RECEIVE_FILE_TRANSFERJET,
+                currentSelectedFile
+            )
+            openToshibaTransferJet()
+        }
+    }
 
+    fun onFileItemClick(file: File) {
+        currentSelectedFile = file
+
+        if (!file.shouldTransferViaBluetooth()) {
+            shouldShowFileRequestDialog = true
+        } else {
+            transferFile()
+        }
+    }
+
+    fun dismissBluetoothPermissionRequiredDialog() {
+        shouldShowBluetoothPermissionRequiredDialog = false
+    }
+
+    fun dismissStoragePermissionRequiredDialog() {
+        shouldShowStoragePermissionRequiredDialog = false
+    }
+
+    fun dismissBluetoothRequiredDialog() {
+        shouldShowBluetoothRequiredDialog = false
+    }
+
+    fun dismissBluetoothDeviceUndetectedDialog() {
+        shouldShowBluetoothDeviceUndetectedDialog = false
+    }
+
+    fun dismissFileRequestDialog() {
+        shouldShowFileRequestDialog = false
+    }
+
+    fun navigateBack() {
+        activity.moveTaskToBack(true)
+    }
+
+    fun navigateToSettings() {
+        dismissStoragePermissionRequiredDialog()
+
+        val action = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS
+        } else {
+            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
+        }
+
+        openAppPermissionSetting(activity, action)
+    }
+
+    private fun openToshibaTransferJet() {
         val packageName = activity.getString(R.string.toshibar_transferjet_package_name)
         val isAppInstalled = try {
             activity.packageManager.getPackageInfo(packageName, 0)
@@ -84,34 +164,5 @@ class MouseStateHolder(
                 activity.startActivity(it)
             }
         }
-    }
-
-    fun showFileRequestDialog(fileName: String) {
-        currentSelectedFile = fileName
-        shouldShowFileRequestDialog = true
-    }
-
-    fun getFileRequestDialogDescription(): String {
-        return String.format(activity.getString(R.string.request_file_desc), currentSelectedFile)
-    }
-
-    fun dismissPermissionRequiredDialog() {
-        shouldShowPermissionRequiredDialog = false
-    }
-
-    fun dismissBluetoothRequiredDialog() {
-        shouldShowBluetoothRequiredDialog = false
-    }
-
-    fun dismissBluetoothDeviceUndetectedDialog() {
-        shouldShowBluetoothDeviceUndetectedDialog = false
-    }
-
-    fun dismissFileRequestDialog() {
-        shouldShowFileRequestDialog = false
-    }
-
-    fun navigateBack() {
-        activity.moveTaskToBack(true)
     }
 }

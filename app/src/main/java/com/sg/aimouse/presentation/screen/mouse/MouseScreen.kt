@@ -5,7 +5,6 @@ package com.sg.aimouse.presentation.screen.mouse
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -34,34 +33,32 @@ import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
+import com.sg.aimouse.presentation.component.LoadingDialog
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.component.LocalParentViewModel
+import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.util.openAppPermissionSetting
 
 @Composable
-fun MouseScreen(
-    innerPaddings: PaddingValues,
-    viewModel: MouseViewModel
-) {
-    val stateHolder = rememberMouseStateHolder(viewModel = viewModel)
+fun MouseScreen() {
+    val stateHolder = rememberMouseStateHolder()
     val viewModel = stateHolder.viewModel
-    val bluetoothState by viewModel.getBluetoothState().collectAsState()
+    val bluetoothState by viewModel.bluetoothState.collectAsState()
     BackHandler(onBack = stateHolder::navigateBack)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPaddings)
             .pullRefresh(stateHolder.pullRefreshState)
     ) {
         when (bluetoothState) {
             BluetoothState.CONNECTED -> {
                 LazyColumn(modifier = Modifier.fillMaxSize()) {
-                    val files = viewModel.getFiles()
+                    val files = viewModel.tdMouseFiles
                     itemsIndexed(items = files) { index, item ->
-                        FileItem(item) { fileName -> stateHolder.showFileRequestDialog(fileName) }
+                        FileItem(item) { file -> stateHolder.onFileItemClick(file) }
 
                         if (index < files.lastIndex) {
                             HorizontalDivider(
@@ -86,9 +83,7 @@ fun MouseScreen(
                         .fillMaxWidth(0.7f)
                         .align(Alignment.Center),
                     onClick = stateHolder::connect
-                ) {
-                    Text("Connect TD Mouse")
-                }
+                ) { Text(stringResource(R.string.connect_td_mouse)) }
             }
 
             BluetoothState.CONNECTING -> {
@@ -109,16 +104,29 @@ fun MouseScreen(
         }
     }
 
-    if (stateHolder.shouldShowPermissionRequiredDialog) {
+    if (stateHolder.shouldShowBluetoothPermissionRequiredDialog) {
         Dialog(
             title = stringResource(R.string.permission_required),
-            content = stringResource(R.string.permission_required_desc),
+            content = stringResource(R.string.bluetooth_permission_required_desc),
             isCancellable = false,
             onPositiveClickEvent = {
-                stateHolder.dismissPermissionRequiredDialog()
-                openAppPermissionSetting(stateHolder.activity)
+                stateHolder.apply {
+                    dismissBluetoothPermissionRequiredDialog()
+                    openAppPermissionSetting(activity)
+                }
             },
-            onDismissRequest = stateHolder::dismissPermissionRequiredDialog
+            onDismissRequest = stateHolder::dismissBluetoothPermissionRequiredDialog
+        )
+        return
+    }
+
+    if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
+        Dialog(
+            title = stringResource(R.string.permission_required),
+            content = stringResource(R.string.storage_permission_required_desc),
+            isCancellable = false,
+            onPositiveClickEvent = stateHolder::navigateToSettings,
+            onDismissRequest = stateHolder::dismissStoragePermissionRequiredDialog
         )
         return
     }
@@ -154,10 +162,17 @@ fun MouseScreen(
     if (stateHolder.shouldShowFileRequestDialog) {
         Dialog(
             title = stringResource(R.string.request_file),
-            content = stateHolder.getFileRequestDialogDescription(),
-            onPositiveClickEvent = stateHolder::openToshibaTransferJet,
+            content = stringResource(R.string.request_file_transferjet_desc),
+            onPositiveClickEvent = stateHolder::transferFile,
             onNegativeClickEvent = stateHolder::dismissFileRequestDialog,
             onDismissRequest = stateHolder::dismissFileRequestDialog
+        )
+    }
+
+    if (viewModel.isTransferringFile) {
+        LoadingDialog(
+            title = stringResource(R.string.loading),
+            content = stringResource(R.string.transferring_file)
         )
     }
 }
@@ -165,10 +180,10 @@ fun MouseScreen(
 @Composable
 fun rememberMouseStateHolder(
     activity: ComponentActivity = LocalActivity.current,
-    viewModel: MouseViewModel,
+    viewModel: HomeViewModel = LocalParentViewModel.current as HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
-        onRefresh = { viewModel.sendCommand(CommandType.LIST_FILE) }
+        onRefresh = { viewModel.sendBluetoothCommand(CommandType.LIST_FILE) }
     )
 ): MouseStateHolder {
     return remember { MouseStateHolder(activity, viewModel, pullRefreshState) }

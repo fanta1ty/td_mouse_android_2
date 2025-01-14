@@ -1,43 +1,26 @@
 package com.sg.aimouse.presentation.navigation
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavHostController
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.sg.aimouse.presentation.component.LocalNavController
 import com.sg.aimouse.presentation.screen.mouse.MouseScreen
-import com.sg.aimouse.presentation.screen.mouse.MouseViewModel
 import com.sg.aimouse.presentation.screen.phone.PhoneScreen
-import com.sg.aimouse.util.sharedViewModel
-import com.sg.aimouse.util.viewModelFactory
 
 @Composable
-fun NavGraph(
-    innerPaddings: PaddingValues,
-    navController: NavHostController
-) {
-    val context = LocalContext.current
+fun NavGraph(innerPaddings: PaddingValues) {
+    val navController = LocalNavController.current
 
-    CompositionLocalProvider(LocalNavController provides navController) {
-        NavHost(
-            navController = navController,
-            startDestination = Screen.PhoneScreen.route
-        ) {
-            composable(route = Screen.PhoneScreen.route) { entry ->
-                PhoneScreen(innerPaddings)
-            }
+    NavHost(
+        modifier = Modifier.padding(innerPaddings),
+        navController = navController,
+        startDestination = Screen.MouseScreen.route
+    ) {
+        composable(route = Screen.MouseScreen.route) { MouseScreen() }
 
-            composable(route = Screen.MouseScreen.route) { entry ->
-                val sharedViewModel = entry.sharedViewModel<MouseViewModel>(
-                    navController,
-                    viewModelFactory { MouseViewModel(context) }
-                )
-
-                MouseScreen(innerPaddings, sharedViewModel)
-            }
-        }
+        composable(route = Screen.PhoneScreen.route) { PhoneScreen() }
     }
 }
