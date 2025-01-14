@@ -59,4 +59,5 @@ dependencies {
 
     implementation(libs.com.gson)
     implementation(libs.com.dexter)
+    implementation(libs.com.smbj)
 }
