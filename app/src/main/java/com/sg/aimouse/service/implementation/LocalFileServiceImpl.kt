@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
-import com.sg.aimouse.service.FileService
+import com.sg.aimouse.service.LocalFileService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -18,7 +18,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.File as JavaFile
 
-class FileServiceImpl : FileService {
+class LocalFileServiceImpl : LocalFileService {
 
     private var _shouldShowLocalFileList by mutableStateOf(false)
     override val shouldShowLocalFileList: Boolean

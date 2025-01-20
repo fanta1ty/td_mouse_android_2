@@ -2,35 +2,22 @@ package com.sg.aimouse.presentation.screen.home
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.sg.aimouse.service.BluetoothService
-import com.sg.aimouse.service.BluetoothState
-import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.service.FileService
-import com.sg.aimouse.service.implementation.BluetoothServiceImpl
-import com.sg.aimouse.service.implementation.FileServiceImpl
-import kotlinx.coroutines.launch
+import com.sg.aimouse.service.LocalFileService
+import com.sg.aimouse.service.SambaService
+import com.sg.aimouse.service.implementation.BluetoothServiceImplLocal
+import com.sg.aimouse.service.implementation.LocalFileServiceImpl
+import com.sg.aimouse.service.implementation.SambaServiceImpl
 
 class HomeViewModel(
     context: Context
 ) : ViewModel(),
-    BluetoothService by BluetoothServiceImpl(context),
-    FileService by FileServiceImpl() {
-
-    init {
-        viewModelScope.launch {
-            bluetoothState.collect { state ->
-                when (state) {
-                    BluetoothState.CONNECTED -> sendBluetoothCommand(CommandType.LIST_FILE)
-                    BluetoothState.DISCONNECTED -> closeBluetoothConnection()
-                    BluetoothState.CONNECTING -> Unit
-                }
-            }
-        }
-    }
+    BluetoothService by BluetoothServiceImplLocal(context),
+    LocalFileService by LocalFileServiceImpl(),
+    SambaService by SambaServiceImpl(context) {
 
     override fun onCleared() {
-        closeBluetoothConnection(true)
+        closeSMB()
         super.onCleared()
     }
 }

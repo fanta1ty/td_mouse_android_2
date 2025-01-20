@@ -2,7 +2,7 @@
 
 package com.sg.aimouse.presentation.screen.home
 
-import android.content.Context
+import androidx.activity.ComponentActivity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.DrawerState
@@ -16,14 +16,20 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.sg.aimouse.R
+import com.sg.aimouse.presentation.component.Dialog
+import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.LocalNavController
 import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.navigation.NavGraph
@@ -36,6 +42,20 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen() {
     val stateHolder = rememberHomeStateHolder()
+    val lifecycleOwner = stateHolder.lifecycleOwner
+
+    DisposableEffect(lifecycleOwner) {
+        val lifecycle = lifecycleOwner.lifecycle
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> stateHolder.requestStoragePermission()
+                else -> Unit
+            }
+        }
+
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     NavDrawer(
         stateHolder.selectedDrawerIndex,
@@ -68,19 +88,28 @@ fun HomeScreen() {
             ) { NavGraph(innerPaddings) }
         }
     }
+
+    if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
+        Dialog(
+            title = stringResource(R.string.permission_required),
+            content = stringResource(R.string.storage_permission_required_desc),
+            onPositiveClickEvent = stateHolder::navigateToAppPermissionSettings
+        )
+    }
 }
 
 @Composable
 fun rememberHomeStateHolder(
-    context: Context = LocalContext.current,
-    viewModel: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(context) }),
+    activity: ComponentActivity = LocalActivity.current,
+    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
+    viewModel: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(activity) }),
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 ): HomeStateHolder {
     return remember {
         HomeStateHolder(
-            context, viewModel, navController, coroutineScope, drawerState
+            activity, lifecycleOwner, viewModel, navController, coroutineScope, drawerState
         )
     }
 }

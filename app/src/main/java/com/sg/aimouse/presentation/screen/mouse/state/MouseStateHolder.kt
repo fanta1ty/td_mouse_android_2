@@ -2,7 +2,6 @@ package com.sg.aimouse.presentation.screen.mouse.state
 
 import android.content.pm.PackageManager
 import android.os.Build
-import android.provider.Settings
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -97,28 +96,7 @@ class MouseStateHolder(
 
     fun onFileItemClick(file: File) {
         currentSelectedFile = file
-
-        if (!file.shouldTransferViaBluetooth()) {
-            shouldShowFileRequestDialog = true
-        } else {
-            transferFile()
-        }
-    }
-
-    fun dismissBluetoothPermissionRequiredDialog() {
-        shouldShowBluetoothPermissionRequiredDialog = false
-    }
-
-    fun dismissStoragePermissionRequiredDialog() {
-        shouldShowStoragePermissionRequiredDialog = false
-    }
-
-    fun dismissBluetoothRequiredDialog() {
-        shouldShowBluetoothRequiredDialog = false
-    }
-
-    fun dismissBluetoothDeviceUndetectedDialog() {
-        shouldShowBluetoothDeviceUndetectedDialog = false
+        viewModel.downloadFile(file.fileName)
     }
 
     fun dismissFileRequestDialog() {
@@ -127,18 +105,6 @@ class MouseStateHolder(
 
     fun navigateBack() {
         activity.moveTaskToBack(true)
-    }
-
-    fun navigateToSettings() {
-        dismissStoragePermissionRequiredDialog()
-
-        val action = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
-            Settings.ACTION_APPLICATION_DETAILS_SETTINGS
-        } else {
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION
-        }
-
-        openAppPermissionSetting(activity, action)
     }
 
     private fun openToshibaTransferJet() {

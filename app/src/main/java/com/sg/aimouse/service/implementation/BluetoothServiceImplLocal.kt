@@ -19,7 +19,7 @@ import com.sg.aimouse.service.BluetoothResponseType
 import com.sg.aimouse.service.BluetoothService
 import com.sg.aimouse.service.BluetoothState
 import com.sg.aimouse.service.CommandType
-import com.sg.aimouse.service.FileService
+import com.sg.aimouse.service.LocalFileService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -40,9 +40,9 @@ import kotlin.text.toByteArray
 import java.io.File as JavaFile
 
 @SuppressLint("MissingPermission")
-class BluetoothServiceImpl(
+class BluetoothServiceImplLocal(
     private val context: Context
-) : BluetoothService, FileService by FileServiceImpl() {
+) : BluetoothService, LocalFileService by LocalFileServiceImpl() {
 
     //region Fields
     private val uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee")
@@ -93,7 +93,7 @@ class BluetoothServiceImpl(
             adapter.cancelDiscovery()
             if (socket == null) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to create RFCOMM socket")
-                this@BluetoothServiceImpl.cancel()
+                this@BluetoothServiceImplLocal.cancel()
                 return@launch
             }
 
@@ -102,7 +102,7 @@ class BluetoothServiceImpl(
                 withContext(Dispatchers.Main) { connected(socket!!) }
             } catch (e: IOException) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Bluetooth", e)
-                this@BluetoothServiceImpl.cancel()
+                this@BluetoothServiceImplLocal.cancel()
             }
         }
     }
@@ -190,7 +190,7 @@ class BluetoothServiceImpl(
                 outStream = socket.outputStream
             } catch (e: IOException) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open stream", e)
-                this@BluetoothServiceImpl.cancel()
+                this@BluetoothServiceImplLocal.cancel()
                 return@launch
             }
 
@@ -241,8 +241,8 @@ class BluetoothServiceImpl(
                                 files.addAll(response.files.map { File(it.name, it.size) })
 
                                 withContext(Dispatchers.Main) {
-                                    this@BluetoothServiceImpl._tdMouseFiles.clear()
-                                    this@BluetoothServiceImpl._tdMouseFiles.addAll(files)
+                                    this@BluetoothServiceImplLocal._tdMouseFiles.clear()
+                                    this@BluetoothServiceImplLocal._tdMouseFiles.addAll(files)
                                 }
 
                                 combinedBuffer = byteArrayOf()
@@ -257,7 +257,7 @@ class BluetoothServiceImpl(
                     }
                 } catch (e: IOException) {
                     Log.e(AiMouseSingleton.DEBUG_TAG, "Input stream failed", e)
-                    this@BluetoothServiceImpl.cancel()
+                    this@BluetoothServiceImplLocal.cancel()
                 }
             }
         }
