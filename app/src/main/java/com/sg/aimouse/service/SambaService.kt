@@ -1,18 +1,22 @@
 package com.sg.aimouse.service
 
 import com.sg.aimouse.model.File
+import com.sg.aimouse.service.implementation.SMBState
+import kotlinx.coroutines.flow.StateFlow
 
 interface SambaService {
 
+    val smbState: StateFlow<SMBState>
     val remoteFiles: List<File>
+    val isTransferringFileSMB: Boolean
 
     fun connectSMB()
 
-    fun closeSMB()
+    fun closeSMB(isRelease: Boolean = false)
 
-    suspend fun getRemoteFiles(folderName: String = "")
+    fun retrieveRemoteFilesSMB(folderName: String = "")
 
-    fun uploadFile(fileName: String)
+    fun uploadFileSMB(fileName: String)
 
-    fun downloadFile(fileName: String)
+    fun downloadFileSMB(fileName: String)
 }

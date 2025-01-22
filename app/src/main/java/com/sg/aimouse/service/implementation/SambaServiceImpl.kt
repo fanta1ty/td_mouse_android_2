@@ -4,7 +4,11 @@ import android.content.Context
 import android.os.Environment
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.StringRes
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.mssmb2.SMB2CreateDisposition
@@ -19,8 +23,13 @@ import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.SambaService
+import com.sg.aimouse.util.isNetworkAvailable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
@@ -29,7 +38,13 @@ import java.io.IOException
 import java.lang.RuntimeException
 import java.io.File as JavaFile
 
+enum class SMBState {
+    RECONNECT, CONNECTING, CONNECTED, DISCONNECTED
+}
+
 class SambaServiceImpl(private val context: Context) : SambaService {
+
+    //region Fields
     private val host = "14.241.244.11"
     private val username = "admin"
     private val pwd = "trek2000"
@@ -39,80 +54,127 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     private var diskShare: DiskShare? = null
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
-    private val _remoteFiles = mutableStateListOf<File>()
 
+    private val _smbState = MutableStateFlow(SMBState.DISCONNECTED)
+    override val smbState: StateFlow<SMBState>
+        get() = _smbState.asStateFlow()
+
+    private val _remoteFiles = mutableStateListOf<File>()
     override val remoteFiles: List<File>
         get() = _remoteFiles
 
+    private var _isTransferringFileSMB by mutableStateOf(false)
+    override val isTransferringFileSMB: Boolean
+        get() = _isTransferringFileSMB
+    //endregion
+
+    init {
+        coroutineScope.launch(Dispatchers.Main) {
+            smbState.collect { state ->
+                when (state) {
+                    SMBState.CONNECTED -> retrieveRemoteFilesSMB()
+                    SMBState.CONNECTING -> Unit
+                    SMBState.RECONNECT -> reconnect()
+                    SMBState.DISCONNECTED -> closeSMB()
+                }
+            }
+        }
+    }
+
     override fun connectSMB() {
+        if (!isNetworkAvailable(context)) {
+            toast(R.string.no_internet)
+            _smbState.value = SMBState.DISCONNECTED
+            return
+        }
+
+        if (_smbState.value == SMBState.CONNECTED || _smbState.value == SMBState.CONNECTING)
+            return
+
         coroutineScope.launch {
-            if (diskShare != null && _remoteFiles.isNotEmpty()) return@launch
-
-            closeSMB()
-            _remoteFiles.clear()
-
             try {
+                _smbState.value = SMBState.CONNECTING
+
                 connection = smbClient.connect(host)
                 session = connection?.authenticate(
                     AuthenticationContext(username, pwd.toCharArray(), "")
                 )
                 diskShare = session?.connectShare("shared") as DiskShare
 
-                getRemoteFiles()
+                _smbState.value = SMBState.CONNECTED
             } catch (e: RuntimeException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Samba", e)
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.td_mouse_connection_error) }
+                _smbState.value = SMBState.DISCONNECTED
             } catch (e: IOException) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect Samba", e)
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.td_mouse_connection_error) }
+                _smbState.value = SMBState.DISCONNECTED
             }
         }
     }
 
-    override fun closeSMB() {
+    override fun closeSMB(isRelease: Boolean) {
         try {
             diskShare?.close()
             session?.close()
             connection?.close()
         } catch (e: Exception) {
-            Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close Samba connection")
-            e.printStackTrace()
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close Samba connection", e)
+        }
+
+        if (isRelease) {
+            coroutineScope.cancel()
         }
     }
 
-    override suspend fun getRemoteFiles(folderName: String) {
-        try {
-            diskShare?.apply {
-                val remoteFolder = openDirectory(
-                    "",
-                    setOf(AccessMask.GENERIC_READ),
-                    null,
-                    SMB2ShareAccess.ALL,
-                    SMB2CreateDisposition.FILE_OPEN,
-                    null
-                )
-
-                if (remoteFolder == null) return
-
-                val files = remoteFolder.map { fileInfo ->
-                    val isDir = EnumWithValue.EnumUtils.isSet(
-                        fileInfo.fileAttributes,
-                        FileAttributes.FILE_ATTRIBUTE_DIRECTORY
-                    )
-
-                    File(fileInfo.fileName, fileInfo.endOfFile, isDirectory = isDir)
-                }
-
-                _remoteFiles.addAll(files)
-            }
-        } catch (e: IOException) {
-            Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to get remote files")
-            e.printStackTrace()
-        }
-    }
-
-    override fun uploadFile(fileName: String) {
+    override fun retrieveRemoteFilesSMB(folderName: String) {
         coroutineScope.launch {
             try {
-                diskShare?.apply {
+                _remoteFiles.clear()
+                if (diskShare == null) throw RuntimeException()
+
+                diskShare!!.apply {
+                    val remoteFolder = openDirectory(
+                        "",
+                        setOf(AccessMask.GENERIC_READ),
+                        null,
+                        SMB2ShareAccess.ALL,
+                        SMB2CreateDisposition.FILE_OPEN,
+                        null
+                    ) ?: throw RuntimeException()
+
+                    val files = remoteFolder.map { fileInfo ->
+                        val isDir = EnumWithValue.EnumUtils.isSet(
+                            fileInfo.fileAttributes,
+                            FileAttributes.FILE_ATTRIBUTE_DIRECTORY
+                        )
+
+                        File(fileInfo.fileName, fileInfo.endOfFile, isDirectory = isDir)
+                    }
+
+                    _remoteFiles.addAll(files)
+                }
+            } catch (e: IOException) {
+                withContext(Dispatchers.Main) { toast(R.string.retrieve_remote_file_error) }
+                e.printStackTrace()
+                _smbState.value = SMBState.RECONNECT
+            } catch (e: RuntimeException) {
+                withContext(Dispatchers.Main) { toast(R.string.retrieve_remote_file_error) }
+                e.printStackTrace()
+                _smbState.value = SMBState.RECONNECT
+            }
+        }
+    }
+
+    override fun uploadFileSMB(fileName: String) {
+        coroutineScope.launch {
+            _isTransferringFileSMB = true
+
+            try {
+                if (diskShare == null) throw RuntimeException()
+
+                diskShare!!.apply {
                     val downloadDir = Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS
                     )
@@ -134,32 +196,30 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                         }
                     }
 
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            "Upload file successfully",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    withContext(Dispatchers.Main) { toast(R.string.upload_file_succeeded) }
                 }
             } catch (e: IOException) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        "Failed to upload file",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
                 e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            } catch (e: RuntimeException) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
+                _smbState.value = SMBState.RECONNECT
             }
+
+            _isTransferringFileSMB = false
         }
     }
 
-    override fun downloadFile(fileName: String) {
+    override fun downloadFileSMB(fileName: String) {
         coroutineScope.launch {
+            _isTransferringFileSMB = true
+
             try {
-                diskShare?.apply {
+                if (diskShare == null) throw RuntimeException()
+
+                diskShare!!.apply {
                     val requestedFile = openFile(
                         fileName,
                         setOf(AccessMask.GENERIC_READ),
@@ -177,25 +237,30 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                         requestedFile.inputStream.use { inStream -> inStream.copyTo(outStream) }
                     }
 
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.save_file_succeeded),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    withContext(Dispatchers.Main) { toast(R.string.save_file_succeeded) }
                 }
             } catch (e: IOException) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.save_file_error),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            } catch (e: RuntimeException) {
+                withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
+                _smbState.value = SMBState.RECONNECT
                 e.printStackTrace()
             }
+
+            _isTransferringFileSMB = false
         }
+    }
+
+    private fun reconnect() {
+        if (diskShare == null || !diskShare!!.isConnected) {
+            closeSMB()
+            connectSMB()
+        }
+    }
+
+    private fun toast(@StringRes msgId: Int) {
+        Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()
     }
 }

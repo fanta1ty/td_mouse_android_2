@@ -5,12 +5,16 @@ package com.sg.aimouse.presentation.screen.mouse
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.PullRefreshState
@@ -26,7 +30,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
-import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LoadingDialog
 import com.sg.aimouse.presentation.component.LocalActivity
@@ -60,13 +63,19 @@ fun MouseScreen() {
                 }
             }
         } else {
-            Image(
+            Column(
                 modifier = Modifier
-                    .size(200.dp)
-                    .align(Alignment.Center),
-                painter = painterResource(R.drawable.ic_empty_file),
-                contentDescription = null
-            )
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Image(
+                    modifier = Modifier.size(200.dp),
+                    painter = painterResource(R.drawable.ic_empty_file),
+                    contentDescription = null
+                )
+            }
         }
 
         PullRefreshIndicator(
@@ -77,17 +86,7 @@ fun MouseScreen() {
         )
     }
 
-    if (stateHolder.shouldShowFileRequestDialog) {
-        Dialog(
-            title = stringResource(R.string.request_file),
-            content = stringResource(R.string.request_file_desc),
-            onPositiveClickEvent = stateHolder::transferFile,
-            onNegativeClickEvent = stateHolder::dismissFileRequestDialog,
-            onDismissRequest = stateHolder::dismissFileRequestDialog
-        )
-    }
-
-    if (viewModel.isTransferringFile) {
+    if (viewModel.isTransferringFileSMB) {
         LoadingDialog(
             title = stringResource(R.string.loading),
             content = stringResource(R.string.transferring_file)
@@ -101,7 +100,7 @@ fun rememberMouseStateHolder(
     viewModel: HomeViewModel = LocalParentViewModel.current as HomeViewModel,
     pullRefreshState: PullRefreshState = rememberPullRefreshState(
         refreshing = false,
-        onRefresh = { }
+        onRefresh = { viewModel.retrieveRemoteFilesSMB() }
     )
 ): MouseStateHolder {
     return remember { MouseStateHolder(activity, viewModel, pullRefreshState) }

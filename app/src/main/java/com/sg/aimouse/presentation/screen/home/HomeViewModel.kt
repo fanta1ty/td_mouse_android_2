@@ -13,11 +13,11 @@ class HomeViewModel(
     context: Context
 ) : ViewModel(),
     BluetoothService by BluetoothServiceImplLocal(context),
-    LocalFileService by LocalFileServiceImpl(),
+    LocalFileService by LocalFileServiceImpl(context),
     SambaService by SambaServiceImpl(context) {
 
     override fun onCleared() {
-        closeSMB()
+        closeSMB(isRelease = true)
         super.onCleared()
     }
 }

@@ -2,7 +2,7 @@
     <string name="app_name">TD Mouse</string>
     <string name="files_on_local">Files on Local</string>
     <string name="files_on_tdmouse">Files on TDMouse</string>
-    <string name="toshibar_transferjet_package_name">jp.co.toshiba.transferjetutility</string>
+    <string name="connect_td_mouse">Connect TD Mouse</string>
     <string name="permission_required">Permission required</string>
     <string name="bluetooth_permission_required_desc">The app need Bluetooth access to connect to TD Mouse. Please grant the permissions in the Settings</string>
     <string name="storage_permission_required_desc">The app need Storage access to display files on your phone. Please grant the permissions in the Settings</string>
@@ -14,12 +14,15 @@
     <string name="request_file_desc">Do you want to download this file from TD Mouse?</string>
     <string name="send_file">Send file</string>
     <string name="send_file_transferjet_desc">This file size is more than 2Mb. Do you want send this file via TransferJet?</string>
-    <string name="transferjet_not_installed">Toshiba TransferJet is not installed</string>
+
+    <string name="td_mouse_connection_error">Failed to connect to TD Mouse</string>
     <string name="save_file_succeeded">File saved to Download folder</string>
     <string name="save_file_error">Failed to save file</string>
-    <string name="get_local_files">Get local files</string>
-    <string name="connect_td_mouse">Connect TD Mouse</string>
+    <string name="upload_file_succeeded">File uploaded to TD Mouse</string>
+    <string name="upload_file_error">Failed to upload file</string>
+    <string name="retrieve_remote_file_error">Failed to get remote files</string>
+    <string name="no_internet">No internet connection</string>
+
     <string name="loading">Loading</string>
     <string name="transferring_file">Transferring file.</string>
-    <string name="empty_file">Empty File</string>
 </resources>

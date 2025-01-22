@@ -3,10 +3,8 @@ package com.sg.aimouse.service.implementation
 import android.content.Context
 import android.os.Environment
 import android.widget.Toast
-import androidx.compose.runtime.getValue
+import androidx.annotation.StringRes
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.LocalFileService
@@ -18,11 +16,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.File as JavaFile
 
-class LocalFileServiceImpl : LocalFileService {
-
-    private var _shouldShowLocalFileList by mutableStateOf(false)
-    override val shouldShowLocalFileList: Boolean
-        get() = _shouldShowLocalFileList
+class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
     private val _localFiles = mutableStateListOf<File>()
     override val localFiles: List<File>
@@ -50,37 +44,29 @@ class LocalFileServiceImpl : LocalFileService {
         }
     }
 
-    override fun saveFile(context: Context, data: ByteArray, fileName: String) {
+    override fun saveFile(data: ByteArray, fileName: String) {
         val downloadDir = Environment.getExternalStoragePublicDirectory(
             Environment.DIRECTORY_DOWNLOADS
         )
 
         if (downloadDir == null) {
-            Toast.makeText(
-                context,
-                context.getString(R.string.save_file_error),
-                Toast.LENGTH_SHORT
-            ).show()
+            toast(R.string.save_file_error)
+            return
         }
 
-        downloadDir?.let { dir ->
+        downloadDir.let { dir ->
             val file = JavaFile(dir, fileName)
 
             try {
                 FileOutputStream(file).use { output -> output.write(data) }
             } catch (e: IOException) {
                 e.printStackTrace()
-
-                Toast.makeText(
-                    context,
-                    context.getString(R.string.save_file_error),
-                    Toast.LENGTH_SHORT
-                ).show()
+                toast(R.string.save_file_error)
             }
         }
     }
 
-    override fun updateShouldShowLocalFileList(isShow: Boolean) {
-        _shouldShowLocalFileList = isShow
+    private fun toast(@StringRes msgId: Int) {
+        Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()
     }
 }

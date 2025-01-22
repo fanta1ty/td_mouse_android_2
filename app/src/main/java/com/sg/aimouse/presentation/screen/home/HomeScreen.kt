@@ -48,7 +48,8 @@ fun HomeScreen() {
         val lifecycle = lifecycleOwner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> stateHolder.requestStoragePermission()
+                Lifecycle.Event.ON_START -> stateHolder.requestStoragePermission()
+                Lifecycle.Event.ON_STOP -> stateHolder.viewModel.closeSMB()
                 else -> Unit
             }
         }
