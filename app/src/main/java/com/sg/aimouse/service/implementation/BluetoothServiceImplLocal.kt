@@ -42,7 +42,7 @@ import java.io.File as JavaFile
 @SuppressLint("MissingPermission")
 class BluetoothServiceImplLocal(
     private val context: Context
-) : BluetoothService, LocalFileService by LocalFileServiceImpl() {
+) : BluetoothService, LocalFileService by LocalFileServiceImpl(context) {
 
     //region Fields
     private val uuid = UUID.fromString("94f39d29-7d6d-437d-973b-fba39e49d4ee")
@@ -211,7 +211,7 @@ class BluetoothServiceImplLocal(
                             combinedBuffer += tempBuffer
 
                             if (combinedBuffer.size.toLong() == selectedTDMouseFile!!.size) {
-                                saveFile(context, combinedBuffer, selectedTDMouseFile!!.fileName)
+                                saveFile(combinedBuffer, selectedTDMouseFile!!.fileName)
                                 combinedBuffer = byteArrayOf()
 
                                 withContext(Dispatchers.Main) {
