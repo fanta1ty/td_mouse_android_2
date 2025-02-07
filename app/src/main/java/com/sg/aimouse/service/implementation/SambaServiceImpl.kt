@@ -48,6 +48,13 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     private val host = "14.241.244.11"
     private val username = "admin"
     private val pwd = "trek2000"
+    private val rootDir = "shared"
+
+//    private val host = "192.168.54.169"
+//    private val username = "smbuser"
+//    private val pwd = "123456"
+//    private val rootDir = "sambashare"
+
     private val smbClient = SMBClient()
     private var connection: Connection? = null
     private var session: Session? = null
@@ -99,7 +106,7 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                 session = connection?.authenticate(
                     AuthenticationContext(username, pwd.toCharArray(), "")
                 )
-                diskShare = session?.connectShare("shared") as DiskShare
+                diskShare = session?.connectShare(rootDir) as DiskShare
 
                 _smbState.value = SMBState.CONNECTED
             } catch (e: RuntimeException) {
