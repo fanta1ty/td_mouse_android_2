@@ -31,9 +31,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.FileItem
-import com.sg.aimouse.presentation.component.LoadingDialog
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.LocalParentViewModel
+import com.sg.aimouse.presentation.component.ProgressDialog
 import com.sg.aimouse.presentation.screen.home.HomeViewModel
 import com.sg.aimouse.presentation.screen.mouse.state.MouseStateHolder
 
@@ -87,9 +87,10 @@ fun MouseScreen() {
     }
 
     if (viewModel.isTransferringFileSMB) {
-        LoadingDialog(
-            title = stringResource(R.string.loading),
-            content = stringResource(R.string.transferring_file)
+        ProgressDialog(
+            title = stringResource(R.string.transferring_file),
+            content = viewModel.transferSpeed,
+            progress = viewModel.transferProgress
         )
     }
 }

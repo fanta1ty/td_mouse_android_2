@@ -26,9 +26,10 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoadingDialog(
+fun ProgressDialog(
     title: String = "",
-    content: String = ""
+    content: String = "",
+    progress: Float
 ) {
     BasicAlertDialog(onDismissRequest = {}) {
         Surface(
@@ -55,6 +56,7 @@ fun LoadingDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CircularProgressIndicator(
+                        progress = { progress },
                         modifier = Modifier.size(32.dp),
                         strokeWidth = 1.dp
                     )

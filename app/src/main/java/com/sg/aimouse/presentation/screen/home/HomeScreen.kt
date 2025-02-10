@@ -35,6 +35,7 @@ import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.navigation.NavGraph
 import com.sg.aimouse.presentation.screen.home.component.NavDrawer
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
+import com.sg.aimouse.service.implementation.SMBState
 import com.sg.aimouse.util.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -49,7 +50,7 @@ fun HomeScreen() {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_START -> stateHolder.requestStoragePermission()
-                Lifecycle.Event.ON_STOP -> stateHolder.viewModel.closeSMB()
+                Lifecycle.Event.ON_STOP -> stateHolder.viewModel.updateSMBState(SMBState.DISCONNECTED)
                 else -> Unit
             }
         }

@@ -16,8 +16,10 @@ class PhoneStateHolder(
     private var currentSelectedFile: File? = null
 
     fun onFileItemClick(file: File) {
-        currentSelectedFile = file
-        viewModel.uploadFileSMB(file.fileName)
+        if (!file.isDirectory) {
+            currentSelectedFile = file
+            viewModel.uploadFileSMB(file.fileName)
+        }
     }
 
     fun navigateBack() {

@@ -16,8 +16,10 @@ class MouseStateHolder(
     private var currentSelectedFile: File? = null
 
     fun onFileItemClick(file: File) {
-        currentSelectedFile = file
-        viewModel.downloadFileSMB(file.fileName)
+        if (!file.isDirectory) {
+            currentSelectedFile = file
+            viewModel.downloadFileSMB(file.fileName)
+        }
     }
 
     fun navigateBack() {
