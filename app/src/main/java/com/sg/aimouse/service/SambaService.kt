@@ -9,6 +9,8 @@ interface SambaService {
     val smbState: StateFlow<SMBState>
     val remoteFiles: List<File>
     val isTransferringFileSMB: Boolean
+    val transferProgress: Float
+    val transferSpeed: Long
 
     fun connectSMB()
 
