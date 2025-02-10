@@ -6,6 +6,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -42,6 +44,7 @@ enum class SMBState {
     RECONNECT, CONNECTING, CONNECTED, DISCONNECTED
 }
 
+
 class SambaServiceImpl(private val context: Context) : SambaService {
 
     //region Fields
@@ -73,6 +76,15 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     private var _isTransferringFileSMB by mutableStateOf(false)
     override val isTransferringFileSMB: Boolean
         get() = _isTransferringFileSMB
+
+    private var _transferProgress by mutableFloatStateOf(0f)
+    override val transferProgress: Float
+        get() = _transferProgress
+
+    private var _transferSpeed by mutableLongStateOf(0L)
+    override val transferSpeed: Long
+        get() = _transferSpeed
+
     //endregion
 
     init {
@@ -177,6 +189,8 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     override fun uploadFileSMB(fileName: String) {
         coroutineScope.launch {
             _isTransferringFileSMB = true
+            _transferProgress = 0f
+            _transferSpeed = 0L
 
             try {
                 if (diskShare == null) throw RuntimeException()
@@ -187,6 +201,7 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                     )
 
                     val localFile = JavaFile(downloadDir, fileName)
+                    val fileSize = localFile.length()
 
                     val remoteFile = openFile(
                         fileName,
@@ -199,7 +214,22 @@ class SambaServiceImpl(private val context: Context) : SambaService {
 
                     FileInputStream(localFile).use { inputStream ->
                         remoteFile.outputStream.use { outputStream ->
-                            inputStream.copyTo(outputStream)
+                            val buffer = ByteArray(8192)
+                            var bytesTransferred = 0L
+                            val startTime = System.currentTimeMillis()
+
+                            var bytesRead: Int
+
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                                bytesTransferred += bytesRead
+                                _transferProgress = (bytesTransferred.toFloat() / fileSize.toFloat()) * 100
+
+                                val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+                                if (elapsedTime > 0) {
+                                    _transferSpeed = (bytesTransferred / 1024) / elapsedTime.toLong()
+                                }
+                            }
                         }
                     }
 
@@ -222,6 +252,8 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     override fun downloadFileSMB(fileName: String) {
         coroutineScope.launch {
             _isTransferringFileSMB = true
+            _transferProgress = 0f
+            _transferSpeed = 0L
 
             try {
                 if (diskShare == null) throw RuntimeException()
@@ -236,12 +268,33 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                         null
                     )
 
+                    val fileSize = requestedFile.fileInformation.standardInformation.endOfFile
+                    if (fileSize <= 0) throw IOException("File size is zero or invalid")
+
                     val downloadDir = Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS
                     )
 
-                    FileOutputStream(JavaFile(downloadDir, fileName)).use { outStream ->
-                        requestedFile.inputStream.use { inStream -> inStream.copyTo(outStream) }
+                    val localFile = java.io.File(downloadDir, fileName)
+
+                    FileOutputStream(localFile).use { outputStream ->
+                        requestedFile.inputStream.use { inputStream ->
+                            val buffer = ByteArray(8192)
+                            var bytesTransferred = 0L
+                            val startTime = System.currentTimeMillis()
+
+                            var bytesRead: Int
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                                bytesTransferred += bytesRead
+                                _transferProgress = (bytesTransferred.toFloat() / fileSize.toFloat()) * 100
+
+                                val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+                                if (elapsedTime > 0) {
+                                    _transferSpeed = (bytesTransferred / 1024) / elapsedTime.toLong() // KB/s
+                                }
+                            }
+                        }
                     }
 
                     withContext(Dispatchers.Main) { toast(R.string.save_file_succeeded) }
