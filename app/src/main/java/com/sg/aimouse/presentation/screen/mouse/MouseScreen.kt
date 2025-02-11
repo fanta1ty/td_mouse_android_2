@@ -89,7 +89,7 @@ fun MouseScreen() {
     if (viewModel.isTransferringFileSMB) {
         ProgressDialog(
             title = stringResource(R.string.transferring_file),
-            content = viewModel.transferSpeed,
+            content = viewModel.transferSpeed.toString(),
             progress = viewModel.transferProgress
         )
     }
