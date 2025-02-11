@@ -15,6 +15,8 @@ import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
 import com.hierynomus.mssmb2.SMB2Dialect
+import com.hierynomus.mssmb2.SMB2Dialect.SMB_2_1
+import com.hierynomus.mssmb2.SMB2Dialect.SMB_3_1_1
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.protocol.commons.EnumWithValue
 import com.hierynomus.smbj.SMBClient
@@ -30,16 +32,19 @@ import com.sg.aimouse.service.SambaService
 import com.sg.aimouse.util.isNetworkAvailable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.lang.RuntimeException
+import java.io.RandomAccessFile
 import java.io.File as JavaFile
 
 enum class SMBState {
@@ -49,8 +54,8 @@ enum class SMBState {
 class SambaServiceImpl(private val context: Context) : SambaService {
 
     //region Fields
-//    private val host = "14.241.244.11"
-    private val host = "192.168.1.32"
+    private val host = "14.241.244.11"
+//    private val host = "192.168.1.32"
     private val username = "admin"
     private val pwd = "trek2000"
     private val rootDir = "shared"
@@ -62,11 +67,11 @@ class SambaServiceImpl(private val context: Context) : SambaService {
 
     private val smbClient = SMBClient(
         SmbConfig.builder()
-            .withDialects(SMB2Dialect.SMB_2_1)
+            .withDialects(SMB_2_1)
             .withSigningEnabled(false)
-            .withSigningRequired(false)
-            .withSoTimeout(0)
-            .withBufferSize(5 * 1024 * 1024)
+//            .withSigningRequired(false)
+//            .withSoTimeout(0)
+            .withBufferSize(16 * 1024 * 1024)
             .build()
     )
     private var connection: Connection? = null
@@ -241,51 +246,88 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     }
 
     override fun downloadFileSMB(fileName: String) {
-        coroutineScope.launch {
+        coroutineScope.launch(Dispatchers.IO) { // Ensure this runs fully in the background
             _isTransferringFileSMB = true
+            _transferSpeed = "Transfer speed: %.2f MB/s".format(0.0)
+            _transferProgress = 0f
 
             try {
-                if (diskShare == null) throw RuntimeException()
+                if (diskShare == null) throw RuntimeException("Disk share is null")
 
-                diskShare!!.apply {
-                    val requestedFile = openFile(
-                        fileName,
-                        setOf(AccessMask.GENERIC_READ),
-                        null,
-                        SMB2ShareAccess.ALL,
-                        SMB2CreateDisposition.FILE_OPEN,
-                        null
-                    )
+                val requestedFile = diskShare!!.openFile(
+                    fileName,
+                    setOf(AccessMask.GENERIC_READ),
+                    null,
+                    SMB2ShareAccess.ALL,
+                    SMB2CreateDisposition.FILE_OPEN,
+                    null
+                )
 
-                    val downloadDir = Environment.getExternalStoragePublicDirectory(
-                        Environment.DIRECTORY_DOWNLOADS
-                    )
+                val fileSize = requestedFile.getFileInformation(FileStandardInformation::class.java).endOfFile
+                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                val localFile = JavaFile(downloadDir, fileName)
 
-                    FileOutputStream(JavaFile(downloadDir, fileName)).use { outStream ->
-                        requestedFile.inputStream.use { inStream ->
-                            val fileSize = requestedFile.getFileInformation(
-                                FileStandardInformation::class.java
-                            ).endOfFile
+                val chunkSize = if (fileSize > 100 * 1024 * 1024) 16 * 1024 * 1024 else 8 * 1024 * 1024 // **Dynamic buffer size**
+                val buffer = ByteArray(chunkSize)
 
-                            transferFile(inStream, outStream, fileSize)
+                val inputStream = requestedFile.inputStream
+                val randomAccessFile = RandomAccessFile(localFile, "rw")
+
+                var totalBytesRead = 0L
+                var bytesRead: Int
+                val startTime = System.currentTimeMillis()
+
+                // **🔹 CoroutineFlow for Smooth Progress Updates**
+                val progressFlow = flow {
+                    while (true) {
+                        bytesRead = inputStream.read(buffer)
+                        if (bytesRead == -1) break
+
+                        val writeJob = async(Dispatchers.IO) {
+                            synchronized(randomAccessFile) {
+                                randomAccessFile.seek(totalBytesRead)
+                                randomAccessFile.write(buffer, 0, bytesRead)
+                            }
                         }
-                    }
 
-                    withContext(Dispatchers.Main) { toast(R.string.save_file_succeeded) }
+                        totalBytesRead += bytesRead
+
+                        emit(totalBytesRead) // Emit progress
+                        writeJob.await() // Ensure writing happens in parallel
+
+                        delay(500) // **Update UI every 500ms**
+                    }
+                }.flowOn(Dispatchers.IO)
+
+                // **🔹 Collect Progress Smoothly on UI Thread**
+                progressFlow.collect { bytesReadSoFar ->
+                    _transferProgress = bytesReadSoFar.toFloat() / fileSize
+
+                    // **Calculate Speed**
+                    val elapsedTime = (System.currentTimeMillis() - startTime) / 1000.0
+                    if (elapsedTime > 0) {
+                        val speedMBps = (bytesReadSoFar / 1024.0 / 1024.0) / elapsedTime
+                        _transferSpeed = "Speed: %.2f MB/s".format(speedMBps)
+                    }
                 }
-            } catch (e: IOException) {
+
+                // Cleanup
+                randomAccessFile.close()
+                inputStream.close()
+                requestedFile.close()
+
+                withContext(Dispatchers.Main) { toast(R.string.save_file_succeeded) }
+            } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
                 _smbState.value = SMBState.RECONNECT
-            } catch (e: RuntimeException) {
-                withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
-                _smbState.value = SMBState.RECONNECT
-                e.printStackTrace()
             }
 
             _isTransferringFileSMB = false
         }
     }
+
+
 
     override fun updateSMBState(state: SMBState) {
         _smbState.value = state
