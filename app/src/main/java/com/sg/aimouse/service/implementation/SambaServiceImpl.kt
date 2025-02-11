@@ -14,9 +14,7 @@ import com.hierynomus.msdtyp.AccessMask
 import com.hierynomus.msfscc.FileAttributes
 import com.hierynomus.msfscc.fileinformation.FileStandardInformation
 import com.hierynomus.mssmb2.SMB2CreateDisposition
-import com.hierynomus.mssmb2.SMB2Dialect
 import com.hierynomus.mssmb2.SMB2Dialect.SMB_2_1
-import com.hierynomus.mssmb2.SMB2Dialect.SMB_3_1_1
 import com.hierynomus.mssmb2.SMB2ShareAccess
 import com.hierynomus.protocol.commons.EnumWithValue
 import com.hierynomus.smbj.SMBClient
