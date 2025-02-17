@@ -1,5 +1,6 @@
 package com.sg.aimouse.service.implementation
 
+/*
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothSocket
@@ -279,3 +280,4 @@ class BluetoothServiceImplLocal(
         bluetoothStateMutex.withLock { _bluetoothState.value = newState }
     }
 }
+ */

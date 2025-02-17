@@ -1,5 +1,5 @@
 package com.sg.aimouse.service
-
+/*
 import com.sg.aimouse.model.File
 import kotlinx.coroutines.flow.StateFlow
 
@@ -36,3 +36,4 @@ interface BluetoothService {
 
     fun sendFileViaBluetooth(file: File)
 }
+ */

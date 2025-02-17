@@ -49,16 +49,15 @@ enum class SMBState {
 class SambaServiceImpl(private val context: Context) : SambaService {
 
     //region Fields
-//    private val host = "14.241.244.11"
-    private val host = "192.168.1.32"
-    private val username = "admin"
-    private val pwd = "trek2000"
-    private val rootDir = "shared"
+    private val host = "14.241.244.11"
+//    private val host = "192.168.1.32"
 
-//    private val host = "192.168.54.169"
-//    private val username = "smbuser"
-//    private val pwd = "123456"
-//    private val rootDir = "sambashare
+//    private val host = "172.20.10.2"
+//    private val host = "192.168.54.121"
+
+    private val username = "smbuser"
+    private val pwd = "123456"
+    private val rootDir = "sambashare"
 
     private val smbClient = SMBClient(
         SmbConfig.builder()

@@ -1,6 +1,7 @@
-package com.sg.aimouse.presentation.component
+package com.sg.aimouse.presentation.screen.home.component
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,15 +21,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
+import com.sg.aimouse.presentation.component.noRippleClickable
 
 @Composable
-fun FileItem(file: File, onClick: (File) -> Unit) {
+fun FileItem(
+    file: File,
+    onClick: (File) -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
             .padding(horizontal = 8.dp)
-            .noRippleClickable { onClick(file) },
+            .noRippleClickable {
+                if (!file.isDirectory) {
+                    onClick(file)
+                }
+            },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
@@ -58,6 +67,18 @@ fun FileItem(file: File, onClick: (File) -> Unit) {
                     file.formatedFileSize,
                     fontSize = 14.sp,
                     color = Color.Gray
+                )
+            }
+        }
+
+        if (!file.isDirectory) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                CircularCheckBox(
+                    file = file,
+                    onCheckedChange = { file -> onClick(file) }
                 )
             }
         }

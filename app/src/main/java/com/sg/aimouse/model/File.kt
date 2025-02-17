@@ -1,12 +1,15 @@
 package com.sg.aimouse.model
 
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import java.util.Locale
 
 data class File(
     val fileName: String,
     val size: Long = 0,
     val path: String = "",
-    val isDirectory: Boolean = false
+    val isDirectory: Boolean = false,
+    val isSelected: MutableState<Boolean> = mutableStateOf(false)
 ) {
     val shortenFileName: String
     val formatedFileSize: String
@@ -16,9 +19,9 @@ data class File(
         formatedFileSize = formatedFileSize()
     }
 
-    fun shouldTransferViaBluetooth(): Boolean {
-        return size.toDouble() / (1024 * 1024) < 2
-    }
+//    fun shouldTransferViaBluetooth(): Boolean {
+//        return size.toDouble() / (1024 * 1024) < 2
+//    }
 
     private fun shortenFileName(): String {
         return if (isDirectory) {
