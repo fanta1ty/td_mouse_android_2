@@ -22,7 +22,19 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
     override val localFiles: List<File>
         get() = _localFiles
 
+    private val _selectedLocalFiles = mutableMapOf<String, File>()
+    override val selectedLocalFiles: Map<String, File>
+        get() = _selectedLocalFiles
+
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    override fun addSelectedLocalFile(file: File) {
+        _selectedLocalFiles.put(file.fileName, file)
+    }
+
+    override fun removeSelectedLocalFile(fileName: String) {
+        _selectedLocalFiles.remove(fileName)
+    }
 
     override fun retrieveLocalFiles() {
         coroutineScope.launch {

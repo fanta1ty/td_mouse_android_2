@@ -26,18 +26,15 @@ import com.sg.aimouse.presentation.component.noRippleClickable
 @Composable
 fun FileItem(
     file: File,
-    onClick: (File) -> Unit
+    onItemClick: (File) -> Unit,
+    onCheckChanged: (File) -> Unit = {}
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
             .padding(horizontal = 8.dp)
-            .noRippleClickable {
-                if (!file.isDirectory) {
-                    onClick(file)
-                }
-            },
+            .noRippleClickable { onItemClick(file) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
@@ -71,16 +68,42 @@ fun FileItem(
             }
         }
 
-        if (!file.isDirectory) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.CenterEnd
-            ) {
-                CircularCheckBox(
-                    file = file,
-                    onCheckedChange = { file -> onClick(file) }
-                )
-            }
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            CircularCheckBox(
+                file = file,
+                onCheckedChange = onCheckChanged
+            )
         }
+    }
+}
+
+@Composable
+fun FolderNavBackItem(onNavBack: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .padding(horizontal = 8.dp)
+            .noRippleClickable(onClick = onNavBack),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Image(
+            modifier = Modifier.size(30.dp),
+            painter = painterResource(R.drawable.ic_folder),
+            contentDescription = null,
+            contentScale = ContentScale.Fit
+        )
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        Image(
+            modifier = Modifier.size(30.dp),
+            painter = painterResource(R.drawable.ic_folder_nav_back),
+            contentDescription = null,
+            contentScale = ContentScale.Fit
+        )
     }
 }

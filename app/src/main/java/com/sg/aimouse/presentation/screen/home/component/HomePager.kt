@@ -44,7 +44,10 @@ fun HomePager(
                 0 -> { // Mouse
                     FileListColumn(
                         files = viewModel.remoteFiles,
+                        isRootFolder = viewModel.currentPath.isEmpty(),
+                        onNavBack = viewModel::removePath,
                         onItemClick = stateHolder::onMouseFileItemClick,
+                        onCheckChanged = stateHolder::onMouseFileItemCheckChanged,
                         header = {
                             MouseColumnHeader(
                                 onDelete = {},

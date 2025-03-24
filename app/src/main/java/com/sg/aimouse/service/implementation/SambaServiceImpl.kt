@@ -40,6 +40,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.RuntimeException
+import java.util.EnumSet
 import java.io.File as JavaFile
 
 enum class SMBState {
@@ -80,6 +81,10 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     override val remoteFiles: List<File>
         get() = _remoteFiles
 
+    private val _selectedRemoteFiles = mutableMapOf<String, File>()
+    override val selectedRemoteFiles: Map<String, File>
+        get() = _selectedRemoteFiles
+
     private var _isTransferringFileSMB by mutableStateOf(false)
     override val isTransferringFileSMB: Boolean
         get() = _isTransferringFileSMB
@@ -91,6 +96,10 @@ class SambaServiceImpl(private val context: Context) : SambaService {
     private var _transferProgress by mutableFloatStateOf(0f)
     override val transferProgress: Float
         get() = _transferProgress
+
+    private val _currentPath = mutableStateListOf<String>()
+    override val currentPath: List<String>
+        get() = _currentPath
     //endregion
 
     init {
@@ -104,6 +113,24 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                 }
             }
         }
+    }
+
+    override fun addSelectedRemoteFile(file: File) {
+        _selectedRemoteFiles.put(file.fileName, file)
+    }
+
+    override fun removeSelectedRemoteFile(fileName: String) {
+        _selectedRemoteFiles.remove(fileName)
+    }
+
+    override fun appendPath(folderName: String) {
+        _currentPath.add(folderName)
+        retrieveRemoteFilesSMB()
+    }
+
+    override fun removePath() {
+        _currentPath.removeAt(currentPath.size - 1)
+        retrieveRemoteFilesSMB()
     }
 
     override fun connectSMB() {
@@ -155,7 +182,7 @@ class SambaServiceImpl(private val context: Context) : SambaService {
         }
     }
 
-    override fun retrieveRemoteFilesSMB(folderName: String) {
+    override fun retrieveRemoteFilesSMB() {
         coroutineScope.launch {
             try {
                 _remoteFiles.clear()
@@ -163,7 +190,7 @@ class SambaServiceImpl(private val context: Context) : SambaService {
 
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
-                        "",
+                        currentPath.toPath(),
                         setOf(AccessMask.GENERIC_READ),
                         null,
                         SMB2ShareAccess.ALL,
@@ -171,7 +198,16 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                         null
                     ) ?: throw RuntimeException()
 
-                    val files = remoteFolder.map { fileInfo ->
+                    val files = remoteFolder.filter { fileInfo ->
+                        // filter hidden files
+                        !EnumWithValue.EnumUtils.isSet(
+                            fileInfo.fileAttributes,
+                            FileAttributes.FILE_ATTRIBUTE_HIDDEN
+                        )
+                    }.filter { fileInfo ->
+                        // filter hidden folders
+                        !fileInfo.fileName.all { char -> char == '.' }
+                    }.map { fileInfo ->
                         val isDir = EnumWithValue.EnumUtils.isSet(
                             fileInfo.fileAttributes,
                             FileAttributes.FILE_ATTRIBUTE_DIRECTORY
@@ -286,6 +322,47 @@ class SambaServiceImpl(private val context: Context) : SambaService {
         }
     }
 
+    override fun deleteFilesSMB(fileNames: List<String>) {
+        coroutineScope.launch {
+            try {
+                if (diskShare == null) throw RuntimeException()
+
+                diskShare!!.apply {
+                    fileNames.forEach { fileName ->
+                        val path = if (currentPath.isEmpty())
+                            fileName
+                        else
+                            currentPath.toPath(fileName)
+
+                        if (fileExists(path)) {
+                            val file = openFile(
+                                path,
+                                EnumSet.of(AccessMask.DELETE),
+                                null,
+                                SMB2ShareAccess.ALL,
+                                SMB2CreateDisposition.FILE_OPEN,
+                                null
+                            )
+
+                            file.close()
+                            rm(path)
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.remove_remote_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            } catch (e: RuntimeException) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.remove_remote_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            } finally {
+                retrieveRemoteFilesSMB()
+            }
+        }
+    }
+
     override fun updateSMBState(state: SMBState) {
         _smbState.value = state
     }
@@ -342,5 +419,12 @@ class SambaServiceImpl(private val context: Context) : SambaService {
 
     private fun toast(@StringRes msgId: Int) {
         Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun List<String>.toPath(fileName: String = ""): String {
+        return if (fileName.isNotEmpty())
+            this.joinToString("/") + "/" + fileName
+        else
+            this.joinToString("/")
     }
 }

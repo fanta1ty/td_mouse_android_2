@@ -28,11 +28,31 @@ class HomeStateHolder(
         private set
 
     fun onMouseFileItemClick(file: File) {
+        if (file.isDirectory) {
+            viewModel.appendPath(file.fileName)
+        } else {
+            onMouseFileItemCheckChanged(file)
+        }
+    }
+
+    fun onMouseFileItemCheckChanged(file: File) {
         file.isSelected.value = !file.isSelected.value
+
+        if (file.isSelected.value) {
+            viewModel.addSelectedRemoteFile(file)
+        } else {
+            viewModel.removeSelectedRemoteFile(file.fileName)
+        }
     }
 
     fun onPhoneFileItemClick(file: File) {
         file.isSelected.value = !file.isSelected.value
+
+        if (file.isSelected.value) {
+            viewModel.addSelectedLocalFile(file)
+        } else {
+            viewModel.removeSelectedLocalFile(file.fileName)
+        }
     }
 
     fun requestStoragePermission() {

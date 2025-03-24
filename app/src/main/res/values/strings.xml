@@ -21,6 +21,7 @@
     <string name="upload_file_succeeded">File uploaded to TD Mouse</string>
     <string name="upload_file_error">Failed to upload file</string>
     <string name="retrieve_remote_file_error">Failed to get remote files</string>
+    <string name="remove_remote_file_error">Failed to remove remote files</string>
     <string name="no_internet">No internet connection</string>
 
     <string name="transferring_file">Transferring file</string>

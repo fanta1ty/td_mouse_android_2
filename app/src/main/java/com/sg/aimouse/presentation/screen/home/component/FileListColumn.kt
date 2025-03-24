@@ -36,7 +36,10 @@ import com.sg.aimouse.presentation.component.noRippleClickable
 @Composable
 fun FileListColumn(
     files: List<File>,
+    isRootFolder: Boolean = true,
+    onNavBack: () -> Unit = {},
     onItemClick: (File) -> Unit,
+    onCheckChanged: (File) -> Unit = {},
     header: @Composable () -> Unit,
 ) {
     Column(
@@ -47,17 +50,19 @@ fun FileListColumn(
     ) {
         header()
 
+        if (!isRootFolder) {
+            FolderNavBackItem(onNavBack = onNavBack)
+        }
+
         if (files.isNotEmpty()) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 itemsIndexed(items = files) { index, item ->
-                    FileItem(item, onClick = onItemClick)
+                    HorizontalDivider(
+                        modifier = Modifier.padding(8.dp),
+                        thickness = 1.dp
+                    )
 
-                    if (index < files.lastIndex) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(8.dp),
-                            thickness = 1.dp
-                        )
-                    }
+                    FileItem(item, onItemClick = onItemClick, onCheckChanged = onCheckChanged)
                 }
             }
         } else {
@@ -65,8 +70,8 @@ fun FileListColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Image(
                     modifier = Modifier.size(200.dp),
