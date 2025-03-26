@@ -33,8 +33,10 @@ import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.LocalNavController
 import com.sg.aimouse.presentation.component.LocalParentViewModel
 import com.sg.aimouse.presentation.navigation.NavGraph
+import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.component.NavDrawer
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
+import com.sg.aimouse.service.SambaService
 import com.sg.aimouse.service.implementation.SMBState
 import com.sg.aimouse.util.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +44,12 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen() {
-    val stateHolder = rememberHomeStateHolder()
+    val activity = LocalActivity.current
+    val connectionViewModel: ConnectionViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = viewModelFactory { ConnectionViewModel(activity) }
+    )
+    val stateHolder = rememberHomeStateHolder(sambaService = connectionViewModel.getSambaService())
     val lifecycleOwner = stateHolder.lifecycleOwner
 
     DisposableEffect(lifecycleOwner) {
@@ -104,7 +111,8 @@ fun HomeScreen() {
 fun rememberHomeStateHolder(
     activity: ComponentActivity = LocalActivity.current,
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
-    viewModel: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(activity) }),
+    sambaService: SambaService?,
+    viewModel: HomeViewModel = viewModel(factory = viewModelFactory { HomeViewModel(activity, sambaService) }),
     navController: NavHostController = rememberNavController(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     drawerState: DrawerState = rememberDrawerState(initialValue = DrawerValue.Closed)

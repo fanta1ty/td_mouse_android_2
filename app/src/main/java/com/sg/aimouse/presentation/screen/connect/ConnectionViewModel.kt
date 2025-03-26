@@ -9,20 +9,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class ConnectionViewModel(private val context: Context) : ViewModel() { // Save Context as Property
-    private val sambaService: SambaService = SambaServiceImpl(context) // Private instance
+class ConnectionViewModel(private val context: Context) : ViewModel() {
+    private val sambaService: SambaService = SambaServiceImpl(context)
     var lastErrorMessage: String = ""
 
     fun connectSMB(ipAddress: String, username: String, password: String, rootDir: String, callback: (Boolean) -> Unit) {
-        // Update connection information in SambaServiceImpl
         (sambaService as SambaServiceImpl).updateConnectionInfo(ipAddress, username, password, rootDir)
-
-        // Try connecting
         sambaService.connectSMB()
 
-        // Check connection results
         CoroutineScope(Dispatchers.Main).launch {
-            delay(2000) // Wait 2 seconds for connection to complete
+            delay(2000) // waiting connect
             val isConnected = sambaService.isConnected()
             if (!isConnected) {
                 lastErrorMessage = context.getString(com.sg.aimouse.R.string.td_mouse_connection_error)
@@ -31,6 +27,5 @@ class ConnectionViewModel(private val context: Context) : ViewModel() { // Save 
         }
     }
 
-    // After successful connection
     fun getSambaService(): SambaService = sambaService
 }

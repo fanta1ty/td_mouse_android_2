@@ -11,11 +11,18 @@ import com.sg.aimouse.service.implementation.SambaServiceImpl
 
 class HomeViewModel(
     context: Context,
-    sambaService: SambaService? = null // Get from ConnectionViewModel if available
+    sambaService: SambaService? = null // Receive from ConnectionScreen
 ) : ViewModel(),
     BluetoothService by BluetoothServiceImplLocal(context),
     LocalFileService by LocalFileServiceImpl(context),
     SambaService by (sambaService ?: SambaServiceImpl(context)) {
+
+    init {
+        retrieveLocalFiles() // Get local files instantly
+        if (sambaService != null) {
+            retrieveRemoteFilesSMB() // Get file from SMB if connection is available
+        }
+    }
 
     override fun onCleared() {
         closeSMB(isRelease = true)
