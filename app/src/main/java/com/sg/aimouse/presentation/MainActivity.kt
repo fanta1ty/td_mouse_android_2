@@ -33,7 +33,6 @@ class MainActivity : ComponentActivity() {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
 
-        // Restart activity on process death
         if (savedInstanceState != null) {
             val id = savedInstanceState.getInt(mainViewModel.viewModelId.first)
             if (id != mainViewModel.viewModelId.second) {
@@ -53,7 +52,7 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.ConnectionScreen.route // Add route for ConnectionScreen
+                            startDestination = Screen.ConnectionScreen.route
                         ) {
                             composable(Screen.ConnectionScreen.route) {
                                 ConnectionScreen(navController = navController)

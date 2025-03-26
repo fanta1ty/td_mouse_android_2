@@ -23,9 +23,13 @@ import com.sg.aimouse.util.viewModelFactory
 @Composable
 fun ConnectionScreen(
     activity: ComponentActivity = LocalActivity.current,
-    navController: NavHostController // Receive navController from MainActivity
+    navController: NavHostController
 ) {
-    val viewModel: ConnectionViewModel = viewModel(factory = viewModelFactory { ConnectionViewModel(activity) })
+    // Using ViewModel with Activity scope
+    val viewModel: ConnectionViewModel = viewModel(
+        viewModelStoreOwner = activity,
+        factory = viewModelFactory { ConnectionViewModel(activity) }
+    )
     var ipAddress by remember { mutableStateOf("192.168.1.32") }
     var username by remember { mutableStateOf("smbuser") }
     var password by remember { mutableStateOf("123456") }
@@ -111,15 +115,5 @@ fun ConnectionScreen(
                 Text(stringResource(R.string.connect))
             }
         }
-        if (showErrorDialog) {
-            Dialog(
-                title = stringResource(R.string.connection_failed),
-                content = errorMessage,
-                onPositiveClickEvent = { showErrorDialog = false },
-                onDismissRequest = { showErrorDialog = false }
-            )
-        }
-
     }
 }
-
