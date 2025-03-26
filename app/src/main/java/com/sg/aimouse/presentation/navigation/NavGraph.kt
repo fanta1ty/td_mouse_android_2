@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.sg.aimouse.presentation.component.LocalNavController
+import com.sg.aimouse.presentation.screen.home.HomeScreen
 import com.sg.aimouse.presentation.screen.mouse.MouseScreen
 import com.sg.aimouse.presentation.screen.phone.PhoneScreen
 
@@ -19,8 +20,8 @@ fun NavGraph(innerPaddings: PaddingValues) {
         navController = navController,
         startDestination = Screen.MouseScreen.route
     ) {
+        composable(route = Screen.HomeScreen.route) { HomeScreen() }
         composable(route = Screen.MouseScreen.route) { MouseScreen() }
-
         composable(route = Screen.PhoneScreen.route) { PhoneScreen() }
     }
 }

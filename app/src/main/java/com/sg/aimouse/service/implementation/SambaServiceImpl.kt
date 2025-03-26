@@ -49,19 +49,19 @@ enum class SMBState {
     RECONNECT, CONNECTING, CONNECTED, DISCONNECTED
 }
 
-class SambaServiceImpl(private val context: Context) : SambaService {
+class SambaServiceImpl(internal val context: Context) : SambaService {
 
     //region Fields
-    private val host = "14.241.244.11"
-//    private val host = "192.168.1.32"
-    private val username = "admin"
-    private val pwd = "trek2000"
-    private val rootDir = "shared"
+//    private val host = "14.241.244.11"
+//    private val username = "admin"
+//    private val pwd = "trek2000"
+//    private val rootDir = "shared"
 
 //    private val host = "192.168.54.169"
-//    private val username = "smbuser"
-//    private val pwd = "123456"
-//    private val rootDir = "sambashare
+    private var host: String = "192.168.1.32"
+    private var username: String = "smbuser"
+    private var pwd: String = "123456"
+    private var rootDir: String = "sambashare"
 
     private val smbClient = SMBClient(
         SmbConfig.builder()
@@ -108,6 +108,18 @@ class SambaServiceImpl(private val context: Context) : SambaService {
                 }
             }
         }
+    }
+
+    // Function to update connection information
+    fun updateConnectionInfo(newHost: String, newUsername: String, newPassword: String, newRootDir: String) {
+        host = newHost
+        username = newUsername
+        pwd = newPassword
+        rootDir = newRootDir
+    }
+
+    fun isConnected(): Boolean {
+        return _smbState.value == SMBState.CONNECTED
     }
 
     override fun connectSMB() {

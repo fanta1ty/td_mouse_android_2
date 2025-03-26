@@ -13,8 +13,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.navigation.Screen
+import com.sg.aimouse.presentation.screen.connect.ConnectionScreen
 import com.sg.aimouse.presentation.screen.home.HomeScreen
+import com.sg.aimouse.presentation.screen.mouse.MouseScreen
+import com.sg.aimouse.presentation.screen.phone.PhoneScreen
 import com.sg.aimouse.presentation.ui.theme.AiMouseTheme
 
 @SuppressLint("SourceLockedOrientationActivity")
@@ -41,7 +48,22 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) { CompositionLocalProvider(LocalActivity provides this) { HomeScreen() } }
+                ) {
+                    CompositionLocalProvider(LocalActivity provides this) {
+                        val navController = rememberNavController()
+                        NavHost(
+                            navController = navController,
+                            startDestination = Screen.ConnectionScreen.route // Add route for ConnectionScreen
+                        ) {
+                            composable(Screen.ConnectionScreen.route) {
+                                ConnectionScreen(navController = navController)
+                            }
+                            composable(Screen.HomeScreen.route) { HomeScreen() }
+                            composable(Screen.MouseScreen.route) { MouseScreen() }
+                            composable(Screen.PhoneScreen.route) { PhoneScreen() }
+                        }
+                    }
+                }
             }
         }
     }

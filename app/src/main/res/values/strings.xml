@@ -24,4 +24,12 @@
     <string name="no_internet">No internet connection</string>
 
     <string name="transferring_file">Transferring file</string>
+
+    <string name="connect_to_server">Connect to TD Mouse\'s Server</string>
+    <string name="ip_address">TD Mouse\'s IP</string>
+    <string name="username">TD Mouse\'s username</string>
+    <string name="password">TD Mouse\'s password</string>
+    <string name="root_dir">TD Mouse\'s share name</string>
+    <string name="connect">Connect</string>
+    <string name="connection_failed">Connection Failed</string>
 </resources>
