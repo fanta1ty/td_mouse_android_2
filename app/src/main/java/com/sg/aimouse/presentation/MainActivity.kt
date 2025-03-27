@@ -20,8 +20,6 @@ import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.presentation.screen.connect.ConnectionScreen
 import com.sg.aimouse.presentation.screen.home.HomeScreen
-import com.sg.aimouse.presentation.screen.mouse.MouseScreen
-import com.sg.aimouse.presentation.screen.phone.PhoneScreen
 import com.sg.aimouse.presentation.ui.theme.AiMouseTheme
 
 @SuppressLint("SourceLockedOrientationActivity")
@@ -58,8 +56,6 @@ class MainActivity : ComponentActivity() {
                                 ConnectionScreen(navController = navController)
                             }
                             composable(Screen.HomeScreen.route) { HomeScreen() }
-                            composable(Screen.MouseScreen.route) { MouseScreen() }
-                            composable(Screen.PhoneScreen.route) { PhoneScreen() }
                         }
                     }
                 }
