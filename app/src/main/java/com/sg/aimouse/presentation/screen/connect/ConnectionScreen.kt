@@ -8,6 +8,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -15,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.sg.aimouse.R
-import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.util.viewModelFactory
@@ -51,7 +51,8 @@ fun ConnectionScreen(
             Image(
                 painter = painterResource(R.mipmap.ic_launcher_foreground),
                 contentDescription = null,
-                modifier = Modifier.size(250.dp)
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.width(300.dp).height(180.dp)
             )
             Text(
                 text = stringResource(R.string.connect_to_server),

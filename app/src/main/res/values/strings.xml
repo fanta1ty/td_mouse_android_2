@@ -32,4 +32,6 @@
     <string name="root_dir">TD Mouse\'s share name</string>
     <string name="connect">Connect</string>
     <string name="connection_failed">Connection Failed</string>
+    <string name="title_tdmouse_drive">TDMouse Drive Explorer</string>
+    <string name="title_phone_drive">Phone Drive Explorer</string>
 </resources>
