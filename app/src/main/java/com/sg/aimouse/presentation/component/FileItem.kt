@@ -33,11 +33,7 @@ fun FileItem(file: File, onClick: (File) -> Unit) {
     ) {
         Image(
             modifier = Modifier.size(30.dp),
-            painter = if (!file.isDirectory) {
-                painterResource(R.drawable.ic_file)
-            } else {
-                painterResource(R.drawable.ic_folder)
-            },
+            painter = painterResource(getFileIcon(file)),
             contentDescription = null,
             contentScale = ContentScale.Fit
         )
@@ -61,5 +57,20 @@ fun FileItem(file: File, onClick: (File) -> Unit) {
                 )
             }
         }
+    }
+}
+
+private fun getFileIcon(file: File): Int {
+    if (file.isDirectory) {
+        return R.drawable.ic_folder
+    }
+
+    val extension = file.fileName.substringAfterLast(".", "").lowercase()
+    return when (extension) {
+        "txt" -> R.drawable.ic_document
+        "jpg", "jpeg", "png" -> R.drawable.ic_picture
+        "mp3", "wav" -> R.drawable.ic_music
+        "mp4", "avi" -> R.drawable.ic_video
+        else -> R.drawable.ic_file
     }
 }
