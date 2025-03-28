@@ -17,6 +17,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import com.sg.aimouse.R
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.component.ProgressDialog
 import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.util.viewModelFactory
 
@@ -36,6 +37,7 @@ fun ConnectionScreen(
     var rootDir by remember { mutableStateOf("sambashare") }
     var showErrorDialog by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
+    var isConnecting by remember { mutableStateOf(false) } // State ProgressDialog
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -100,7 +102,9 @@ fun ConnectionScreen(
 
             Button(
                 onClick = {
+                    isConnecting = true // Show ProgressDialog
                     viewModel.connectSMB(ipAddress, username, password, rootDir) { success ->
+                        isConnecting = false // Hide ProgressDialog affter conntected
                         if (success) {
                             navController.navigate(Screen.HomeScreen.route) {
                                 popUpTo(navController.graph.startDestinationId) { inclusive = true }
@@ -111,10 +115,34 @@ fun ConnectionScreen(
                         }
                     }
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isConnecting // Disable button when connecting
             ) {
                 Text(stringResource(R.string.connect))
             }
+        }
+
+        // Show ProgressDialog when connecting
+        if (isConnecting) {
+            ProgressDialog(
+                title = stringResource(R.string.connecting),
+                content = stringResource(R.string.please_wait),
+                progress = 0f // circle
+            )
+        }
+
+        // Show Error Dialog if error
+        if (showErrorDialog) {
+            AlertDialog(
+                onDismissRequest = { showErrorDialog = false },
+                title = { Text(stringResource(R.string.connection_failed)) },
+                text = { Text(errorMessage) },
+                confirmButton = {
+                    TextButton(onClick = { showErrorDialog = false }) {
+                        Text(stringResource(android.R.string.ok))
+                    }
+                }
+            )
         }
     }
 }

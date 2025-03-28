@@ -137,13 +137,10 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 diskShare = session?.connectShare(rootDir) as DiskShare
 
                 _smbState.value = SMBState.CONNECTED
-            } catch (e: RuntimeException) {
+            } catch (e: Exception) {
                 e.printStackTrace()
-                withContext(Dispatchers.Main) { toast(R.string.td_mouse_connection_error) }
-                _smbState.value = SMBState.DISCONNECTED
-            } catch (e: IOException) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) { toast(R.string.td_mouse_connection_error) }
+//                withContext(Dispatchers.Main) { toast(R.string.td_mouse_connection_error) }
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to connect to TD Mouse", e)
                 _smbState.value = SMBState.DISCONNECTED
             }
         }

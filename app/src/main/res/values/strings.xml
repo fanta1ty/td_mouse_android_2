@@ -34,4 +34,6 @@
     <string name="connection_failed">Connection Failed</string>
     <string name="title_tdmouse_drive">TDMouse Drive Explorer</string>
     <string name="title_phone_drive">Phone Drive Explorer</string>
+    <string name="connecting">Connecting</string>
+    <string name="please_wait">Please wait...</string>
 </resources>
