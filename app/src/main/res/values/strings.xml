@@ -36,4 +36,6 @@
     <string name="title_phone_drive">Phone Drive Explorer</string>
     <string name="connecting">Connecting</string>
     <string name="please_wait">Please wait...</string>
+    <string name="downloading">Downloading...</string>
+    <string name="uploading">Uploading...</string>
 </resources>

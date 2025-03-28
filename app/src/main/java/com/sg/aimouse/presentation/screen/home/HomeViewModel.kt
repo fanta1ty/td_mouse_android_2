@@ -2,6 +2,7 @@ package com.sg.aimouse.presentation.screen.home
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
+import com.sg.aimouse.model.File
 import com.sg.aimouse.service.BluetoothService
 import com.sg.aimouse.service.LocalFileService
 import com.sg.aimouse.service.SambaService
@@ -11,16 +12,34 @@ import com.sg.aimouse.service.implementation.SambaServiceImpl
 
 class HomeViewModel(
     context: Context,
-    sambaService: SambaService? = null // Receive from ConnectionScreen
+    sambaService: SambaService? = null
 ) : ViewModel(),
     BluetoothService by BluetoothServiceImplLocal(context),
     LocalFileService by LocalFileServiceImpl(context),
     SambaService by (sambaService ?: SambaServiceImpl(context)) {
 
     init {
-        retrieveLocalFiles() // Get local files instantly
+        retrieveLocalFiles()
         if (sambaService != null) {
-            retrieveRemoteFilesSMB() // Get file from SMB if connection is available
+            retrieveRemoteFilesSMB()
+        }
+    }
+
+    fun uploadFileOrFolder(file: File) {
+        if (file.isDirectory) {
+            val localFiles = localFiles.filter { it.path.startsWith(file.path) }
+            localFiles.forEach { uploadFileSMB(it.fileName) }
+        } else {
+            uploadFileSMB(file.fileName)
+        }
+    }
+
+    fun downloadFileOrFolder(file: File) {
+        if (file.isDirectory) {
+            val remoteFiles = remoteFiles.filter { it.path.startsWith(file.path) }
+            remoteFiles.forEach { downloadFileSMB(it.fileName) }
+        } else {
+            downloadFileSMB(file.fileName)
         }
     }
 

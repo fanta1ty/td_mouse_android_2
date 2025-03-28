@@ -3,6 +3,7 @@
 package com.sg.aimouse.presentation.screen.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,7 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,6 +26,7 @@ import com.sg.aimouse.model.File
 import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
+import com.sg.aimouse.presentation.component.ProgressDialog
 import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
 import com.sg.aimouse.service.implementation.SMBState
@@ -43,6 +47,16 @@ fun HomeScreen() {
 
     val stateHolder = remember { HomeStateHolder(activity, lifecycleOwner, viewModel) }
 
+    // status for Drag & Drop and Progress
+    var draggedFile by remember { mutableStateOf<File?>(null) }
+    var isUploading by remember { mutableStateOf(false) }
+    var isDownloading by remember { mutableStateOf(false) }
+
+    // Status from viewModel
+    val transferProgress = viewModel.transferProgress
+    val transferSpeed = viewModel.transferSpeed
+    val isTransferring = viewModel.isTransferringFileSMB
+
     DisposableEffect(lifecycleOwner) {
         val lifecycle = lifecycleOwner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
@@ -56,8 +70,7 @@ fun HomeScreen() {
         onDispose { lifecycle.removeObserver(observer) }
     }
 
-    Scaffold(
-    ) { innerPaddings ->
+    Scaffold { innerPaddings ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -67,7 +80,7 @@ fun HomeScreen() {
             // TDMouse Drive Explorer (Server files)
             Column(
                 modifier = Modifier
-                    .weight(1f) // 50% height
+                    .weight(1f)
                     .fillMaxWidth()
                     .background(Color.White, shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp))
                     .padding(top = 5.dp, start = 5.dp, end = 5.dp)
@@ -76,15 +89,37 @@ fun HomeScreen() {
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(color = colorResource(R.color.light_gray_ED), shape = RoundedCornerShape(14.dp))
-                ){
+                ) {
                     Text(
                         text = stringResource(R.string.title_tdmouse_drive),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 16.dp,top = 3.dp, bottom = 3.dp)
+                        modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                     )
                 }
-                LazyColumn(modifier = Modifier.fillMaxSize()
-                    .padding(start = 8.dp)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 8.dp)
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { offset ->
+                                    val file = viewModel.remoteFiles.find { file ->
+                                        val index = (offset.y / 50.dp.toPx()).toInt()
+                                        index in viewModel.remoteFiles.indices && viewModel.remoteFiles[index] == file
+                                    }
+                                    draggedFile = file
+                                },
+                                onDragEnd = {
+                                    if (draggedFile != null) {
+                                        isDownloading = true
+                                        viewModel.downloadFileOrFolder(draggedFile!!)
+                                    }
+                                    draggedFile = null
+                                },
+                                onDragCancel = { draggedFile = null },
+                                onDrag = { _, _ -> }
+                            )
+                        }
                 ) {
                     items(viewModel.remoteFiles) { file ->
                         FileItem(file) { /* Handle click */ }
@@ -92,13 +127,12 @@ fun HomeScreen() {
                 }
             }
 
-            // Add a horizontal space
             Spacer(modifier = Modifier.height(8.dp))
 
             // Phone Drive Explorer (Local files)
             Column(
                 modifier = Modifier
-                    .weight(1f) // 50% height
+                    .weight(1f)
                     .fillMaxWidth()
                     .background(Color.White, shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                     .padding(top = 5.dp, start = 5.dp, end = 5.dp)
@@ -111,11 +145,33 @@ fun HomeScreen() {
                     Text(
                         text = stringResource(R.string.title_phone_drive),
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 16.dp,top = 3.dp, bottom = 3.dp)
+                        modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                     )
                 }
-                LazyColumn(modifier = Modifier.fillMaxSize()
-                    .padding(start = 8.dp)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 8.dp)
+                        .pointerInput(Unit) {
+                            detectDragGesturesAfterLongPress(
+                                onDragStart = { offset ->
+                                    val file = viewModel.localFiles.find { file ->
+                                        val index = (offset.y / 50.dp.toPx()).toInt()
+                                        index in viewModel.localFiles.indices && viewModel.localFiles[index] == file
+                                    }
+                                    draggedFile = file
+                                },
+                                onDragEnd = {
+                                    if (draggedFile != null) {
+                                        isUploading = true
+                                        viewModel.uploadFileOrFolder(draggedFile!!)
+                                    }
+                                    draggedFile = null
+                                },
+                                onDragCancel = { draggedFile = null },
+                                onDrag = { _, _ -> }
+                            )
+                        }
                 ) {
                     items(viewModel.localFiles) { file ->
                         FileItem(file) { /* Handle click */ }
@@ -123,13 +179,28 @@ fun HomeScreen() {
                 }
             }
         }
-    }
 
-    if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
-        Dialog(
-            title = stringResource(R.string.permission_required),
-            content = stringResource(R.string.storage_permission_required_desc),
-            onPositiveClickEvent = stateHolder::navigateToAppPermissionSettings
-        )
+        // Show ProgressDialog when uploading/downloading
+        if (isUploading || isDownloading) {
+            LaunchedEffect(isTransferring) {
+                if (!isTransferring) {
+                    isUploading = false
+                    isDownloading = false
+                }
+            }
+            ProgressDialog(
+                title = if (isUploading) stringResource(R.string.uploading) else stringResource(R.string.downloading),
+                content = transferSpeed,
+                progress = transferProgress
+            )
+        }
+
+        if (stateHolder.shouldShowStoragePermissionRequiredDialog) {
+            Dialog(
+                title = stringResource(R.string.permission_required),
+                content = stringResource(R.string.storage_permission_required_desc),
+                onPositiveClickEvent = stateHolder::navigateToAppPermissionSettings
+            )
+        }
     }
 }
