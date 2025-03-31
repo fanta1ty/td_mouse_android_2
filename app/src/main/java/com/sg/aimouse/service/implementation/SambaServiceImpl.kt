@@ -121,7 +121,11 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                     } else if (share.folderExists(fileName)) {
                         share.rmdir(fileName, true) // Xóa đệ quy
                     }
-                    withContext(Dispatchers.Main) { toast(R.string.delete_file_succeeded) }
+                    withContext(Dispatchers.Main) {
+                        toast(R.string.delete_file_succeeded)
+                        // Refresh file list when upload/download complete
+                        retrieveRemoteFilesSMB()
+                    }
                 } ?: throw RuntimeException("Disk share is null")
             } catch (e: Exception) {
                 e.printStackTrace()

@@ -75,6 +75,19 @@ fun HomeScreen() {
     val transferSpeed = viewModel.transferSpeed
     val isTransferring = viewModel.isTransferringFileSMB
 
+    // Variable to refresh interface after deletion
+    var refreshTrigger by remember { mutableStateOf(0) }
+
+    // Refresh file list when upload/download complete
+    LaunchedEffect(isTransferring) {
+        if (!isTransferring && (isUploading || isDownloading)) {
+            viewModel.retrieveLocalFiles()
+            viewModel.retrieveRemoteFilesSMB()
+            isUploading = false
+            isDownloading = false
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val lifecycle = lifecycleOwner.lifecycle
         val observer = LifecycleEventObserver { _, event ->
@@ -167,7 +180,8 @@ fun HomeScreen() {
                                     fileToDelete = file
                                     isRemoteFile = true
                                     showDeleteDialog = true
-                                }
+                                },
+                                refreshTrigger = refreshTrigger
                             )
                         }
                     }
@@ -246,7 +260,8 @@ fun HomeScreen() {
                                     fileToDelete = file
                                     isRemoteFile = false
                                     showDeleteDialog = true
-                                }
+                                },
+                                refreshTrigger = refreshTrigger
                             )
                         }
                     }
@@ -279,7 +294,8 @@ fun HomeScreen() {
                             FileItem(
                                 file = file,
                                 onClick = {},
-                                onSwipeToDelete = {}
+                                onSwipeToDelete = {},
+                                refreshTrigger = refreshTrigger
                             )
                         }
                     }
@@ -287,12 +303,6 @@ fun HomeScreen() {
             }
 
             if (isUploading || isDownloading) {
-                LaunchedEffect(isTransferring) {
-                    if (!isTransferring) {
-                        isUploading = false
-                        isDownloading = false
-                    }
-                }
                 ProgressDialog(
                     title = if (isUploading) stringResource(R.string.uploading) else stringResource(R.string.downloading),
                     content = transferSpeed,
@@ -305,6 +315,9 @@ fun HomeScreen() {
                     onDismissRequest = {
                         showDeleteDialog = false
                         fileToDelete = null
+                        viewModel.retrieveLocalFiles()
+                        viewModel.retrieveRemoteFilesSMB()
+                        refreshTrigger++
                     },
                     title = { Text("Confirm Delete") },
                     text = { Text("Are you sure you want to delete ${fileToDelete!!.fileName}?") },
@@ -314,6 +327,7 @@ fun HomeScreen() {
                                 viewModel.deleteFile(fileToDelete!!, isRemoteFile)
                                 showDeleteDialog = false
                                 fileToDelete = null
+                                refreshTrigger++
                             }
                         ) {
                             Text("Delete")
@@ -324,6 +338,9 @@ fun HomeScreen() {
                             onClick = {
                                 showDeleteDialog = false
                                 fileToDelete = null
+                                viewModel.retrieveLocalFiles()
+                                viewModel.retrieveRemoteFilesSMB()
+                                refreshTrigger++
                             }
                         ) {
                             Text("Cancel")

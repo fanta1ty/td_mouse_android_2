@@ -9,6 +9,9 @@ import com.sg.aimouse.service.SambaService
 import com.sg.aimouse.service.implementation.BluetoothServiceImplLocal
 import com.sg.aimouse.service.implementation.LocalFileServiceImpl
 import com.sg.aimouse.service.implementation.SambaServiceImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class HomeViewModel(
     context: Context,
@@ -44,10 +47,12 @@ class HomeViewModel(
     }
 
     fun deleteFile(file: File, isRemote: Boolean) {
-        if (isRemote) {
-            deleteFileSMB(file.fileName)
-        } else {
-            deleteFile(file.path)
+        CoroutineScope(Dispatchers.Main).launch {
+            if (isRemote) {
+                deleteFileSMB(file.fileName)
+            } else {
+                deleteFile(file.path)
+            }
         }
     }
 

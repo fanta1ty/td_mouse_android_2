@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,7 +21,8 @@ import com.sg.aimouse.model.File
 fun FileItem(
     file: File,
     onClick: (File) -> Unit,
-    onSwipeToDelete: (File) -> Unit
+    onSwipeToDelete: (File) -> Unit,
+    refreshTrigger: Int // Add refreshTrigger to reset status
 ) {
     val dismissState = rememberDismissState(
         confirmStateChange = { dismissValue ->
@@ -32,6 +34,12 @@ fun FileItem(
             }
         }
     )
+
+    LaunchedEffect(refreshTrigger) {
+        if (dismissState.currentValue != DismissValue.Default) {
+            dismissState.reset()
+        }
+    }
 
     SwipeToDismiss(
         state = dismissState,
