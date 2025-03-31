@@ -33,8 +33,14 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
             if (downloadDir.exists() && downloadDir.isDirectory) {
                 val localFiles = downloadDir.listFiles()?.map { file ->
                     val size = if (!file.isDirectory) file.length() else 0
-                    File(file.name, size, file.path, file.isDirectory)
-                } ?: emptyList()
+                    File(
+                        fileName = file.name,
+                        size = size,
+                        path = file.path,
+                        isDirectory = file.isDirectory,
+                        createdTime = file.lastModified()
+                    )
+                }?.sortedByDescending { it.createdTime } ?: emptyList()
 
                 withContext(Dispatchers.Main) {
                     _localFiles.clear()

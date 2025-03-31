@@ -6,7 +6,8 @@ data class File(
     val fileName: String,
     val size: Long = 0,
     val path: String = "",
-    val isDirectory: Boolean = false
+    val isDirectory: Boolean = false,
+    val createdTime: Long = 0
 ) {
     val shortenFileName: String
     val formatedFileSize: String

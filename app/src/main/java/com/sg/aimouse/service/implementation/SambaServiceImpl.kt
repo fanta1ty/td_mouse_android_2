@@ -207,8 +207,15 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                             FileAttributes.FILE_ATTRIBUTE_DIRECTORY
                         )
 
-                        File(fileInfo.fileName, fileInfo.endOfFile, isDirectory = isDir)
-                    }
+                        val createdTime = fileInfo.creationTime.toEpochMillis()
+
+                        File(
+                            fileName = fileInfo.fileName,
+                            size = fileInfo.endOfFile,
+                            isDirectory = isDir,
+                            createdTime = createdTime
+                        )
+                    }.sortedByDescending { it.createdTime }
 
                     _remoteFiles.addAll(files)
                 }
