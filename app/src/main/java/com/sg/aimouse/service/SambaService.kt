@@ -21,4 +21,6 @@ interface SambaService {
     fun downloadFileSMB(fileName: String)
 
     fun updateSMBState(state: SMBState)
+
+    fun deleteFileSMB(fileName: String)
 }

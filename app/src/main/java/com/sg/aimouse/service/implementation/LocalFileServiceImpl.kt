@@ -66,6 +66,25 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
         }
     }
 
+    override fun deleteFile(filePath: String) {
+        coroutineScope.launch {
+            val file = JavaFile(filePath)
+            val success = if (file.isDirectory) {
+                file.deleteRecursively()
+            } else {
+                file.delete()
+            }
+            withContext(Dispatchers.Main) {
+                if (success) {
+                    toast(R.string.delete_file_succeeded)
+                    retrieveLocalFiles()
+                } else {
+                    toast(R.string.delete_file_error)
+                }
+            }
+        }
+    }
+
     private fun toast(@StringRes msgId: Int) {
         Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()
     }

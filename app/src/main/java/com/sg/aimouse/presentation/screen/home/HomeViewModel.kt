@@ -43,6 +43,14 @@ class HomeViewModel(
         }
     }
 
+    fun deleteFile(file: File, isRemote: Boolean) {
+        if (isRemote) {
+            deleteFileSMB(file.fileName)
+        } else {
+            deleteFile(file.path)
+        }
+    }
+
     override fun onCleared() {
         closeSMB(isRelease = true)
         super.onCleared()

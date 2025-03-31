@@ -9,4 +9,6 @@ interface LocalFileService {
     fun retrieveLocalFiles()
 
     fun saveFile(data: ByteArray, fileName: String)
+
+    fun deleteFile(filePath: String)
 }

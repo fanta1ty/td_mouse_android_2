@@ -112,6 +112,25 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         rootDir = newRootDir
     }
 
+    override fun deleteFileSMB(fileName: String) {
+        coroutineScope.launch {
+            try {
+                diskShare?.let { share ->
+                    if (share.fileExists(fileName)) {
+                        share.rm(fileName)
+                    } else if (share.folderExists(fileName)) {
+                        share.rmdir(fileName, true) // Xóa đệ quy
+                    }
+                    withContext(Dispatchers.Main) { toast(R.string.delete_file_succeeded) }
+                } ?: throw RuntimeException("Disk share is null")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.delete_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            }
+        }
+    }
+
     fun isConnected(): Boolean {
         return _smbState.value == SMBState.CONNECTED
     }

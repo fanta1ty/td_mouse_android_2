@@ -1,15 +1,9 @@
 package com.sg.aimouse.presentation.component
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Text
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,43 +15,81 @@ import androidx.compose.ui.unit.sp
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-fun FileItem(file: File, onClick: (File) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .padding(horizontal = 8.dp)
-            .noRippleClickable { onClick(file) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Image(
-            modifier = Modifier.size(30.dp),
-            painter = painterResource(getFileIcon(file)),
-            contentDescription = null,
-            contentScale = ContentScale.Fit
-        )
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        Column {
-            Text(
-                file.shortenFileName,
-                fontSize = 16.sp,
-                color = Color.Black
-            )
-
-            if (!file.isDirectory) {
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Text(
-                    file.formatedFileSize,
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
+fun FileItem(
+    file: File,
+    onClick: (File) -> Unit,
+    onSwipeToDelete: (File) -> Unit
+) {
+    val dismissState = rememberDismissState(
+        confirmStateChange = { dismissValue ->
+            if (dismissValue == DismissValue.DismissedToStart) {
+                onSwipeToDelete(file)
+                true
+            } else {
+                false
             }
         }
-    }
+    )
+
+    SwipeToDismiss(
+        state = dismissState,
+        directions = setOf(DismissDirection.EndToStart),
+        background = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Red)
+                    .padding(end = 16.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = "Delete",
+                    color = Color.White,
+                    fontSize = 16.sp
+                )
+            }
+        },
+        dismissContent = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
+                    .background(Color.White)
+                    .noRippleClickable { onClick(file) }
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    modifier = Modifier.size(30.dp),
+                    painter = painterResource(getFileIcon(file)),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column {
+                    Text(
+                        file.shortenFileName,
+                        fontSize = 16.sp,
+                        color = Color.Black
+                    )
+
+                    if (!file.isDirectory) {
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Text(
+                            file.formatedFileSize,
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+    )
 }
 
 private fun getFileIcon(file: File): Int {
