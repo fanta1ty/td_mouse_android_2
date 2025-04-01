@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -15,6 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterialApi::class)
 @Composable
@@ -22,18 +25,21 @@ fun FileItem(
     file: File,
     onClick: (File) -> Unit,
     onSwipeToDelete: (File) -> Unit,
-    refreshTrigger: Int // Add refreshTrigger to reset status
+    refreshTrigger: Int
 ) {
-    val dismissState = rememberDismissState(
-        confirmStateChange = { dismissValue ->
-            if (dismissValue == DismissValue.DismissedToStart) {
-                onSwipeToDelete(file)
-                true
-            } else {
-                false
+    val dismissState = remember(file.path + file.fileName) {
+        DismissState(
+            initialValue = DismissValue.Default,
+            confirmStateChange = { dismissValue ->
+                if (dismissValue == DismissValue.DismissedToStart) {
+                    onSwipeToDelete(file)
+                    true
+                } else {
+                    false
+                }
             }
-        }
-    )
+        )
+    }
 
     LaunchedEffect(refreshTrigger) {
         if (dismissState.currentValue != DismissValue.Default) {
@@ -78,21 +84,38 @@ fun FileItem(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                Column {
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         file.shortenFileName,
                         fontSize = 16.sp,
                         color = Color.Black
                     )
-
-                    if (!file.isDirectory) {
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Text(
-                            file.formatedFileSize,
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
+                    Row {
+                        Column {
+                            if (!file.isDirectory) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    file.formatedFileSize,
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                        Column (
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.End
+                        ){
+                            val formattedTime = SimpleDateFormat("dd/MM/yyyy HH:mm:ss", Locale.getDefault())
+                                .format(Date(file.createdTime))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = formattedTime,
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 }
             }

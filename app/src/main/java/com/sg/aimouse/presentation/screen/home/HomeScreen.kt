@@ -70,21 +70,21 @@ fun HomeScreen() {
     var fileToDelete by remember { mutableStateOf<File?>(null) }
     var isRemoteFile by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var refreshTrigger by remember { mutableStateOf(0) }
 
     val transferProgress = viewModel.transferProgress
     val transferSpeed = viewModel.transferSpeed
     val isTransferring = viewModel.isTransferringFileSMB
 
-    // Variable to refresh interface after deletion
-    var refreshTrigger by remember { mutableStateOf(0) }
-
-    // Refresh file list when upload/download complete
     LaunchedEffect(isTransferring) {
-        if (!isTransferring && (isUploading || isDownloading)) {
-            viewModel.retrieveLocalFiles()
-            viewModel.retrieveRemoteFilesSMB()
+        if (!isTransferring && isUploading) {
             isUploading = false
+            refreshTrigger++
+            viewModel.retrieveRemoteFilesSMB()
+        } else if (!isTransferring && isDownloading){
             isDownloading = false
+            refreshTrigger++
+            viewModel.retrieveLocalFiles()
         }
     }
 
@@ -172,7 +172,8 @@ fun HomeScreen() {
                                 )
                             }
                     ) {
-                        items(viewModel.remoteFiles) { file ->
+                        // Add a key to ensure each FileItem is recreated when the list changes
+                        items(viewModel.remoteFiles, key = { it.path + it.fileName }) { file ->
                             FileItem(
                                 file = file,
                                 onClick = { /* Handle click */ },
@@ -252,7 +253,8 @@ fun HomeScreen() {
                                 )
                             }
                     ) {
-                        items(viewModel.localFiles) { file ->
+                        // Add a key to ensure each FileItem is recreated when the list changes
+                        items(viewModel.localFiles, key = { it.path + it.fileName }) { file ->
                             FileItem(
                                 file = file,
                                 onClick = { /* Handle click */ },
@@ -271,7 +273,6 @@ fun HomeScreen() {
             draggedFile?.let { file ->
                 dragOffset?.let { offset ->
                     var cardSize by remember { mutableStateOf<IntSize?>(null) }
-
                     Card(
                         modifier = Modifier
                             .offset {
@@ -315,9 +316,6 @@ fun HomeScreen() {
                     onDismissRequest = {
                         showDeleteDialog = false
                         fileToDelete = null
-                        viewModel.retrieveLocalFiles()
-                        viewModel.retrieveRemoteFilesSMB()
-                        refreshTrigger++
                     },
                     title = { Text("Confirm Delete") },
                     text = { Text("Are you sure you want to delete ${fileToDelete!!.fileName}?") },
@@ -338,8 +336,6 @@ fun HomeScreen() {
                             onClick = {
                                 showDeleteDialog = false
                                 fileToDelete = null
-                                viewModel.retrieveLocalFiles()
-                                viewModel.retrieveRemoteFilesSMB()
                                 refreshTrigger++
                             }
                         ) {
