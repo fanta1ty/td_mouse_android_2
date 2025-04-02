@@ -27,6 +27,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
 import com.sg.aimouse.presentation.component.Dialog
@@ -72,6 +74,12 @@ fun HomeScreen() {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
+    // Refresh state for SwipeRefresh
+    var isRefreshingRemote by remember { mutableStateOf(false) }
+    var isRefreshingLocal by remember { mutableStateOf(false) }
+    val remoteSwipeRefreshState = rememberSwipeRefreshState(isRefreshingRemote)
+    val localSwipeRefreshState = rememberSwipeRefreshState(isRefreshingLocal)
+
     val transferProgress = viewModel.transferProgress
     val transferSpeed = viewModel.transferSpeed
     val isTransferring = viewModel.isTransferringFileSMB
@@ -81,10 +89,24 @@ fun HomeScreen() {
             isUploading = false
             refreshTrigger++
             viewModel.retrieveRemoteFilesSMB()
-        } else if (!isTransferring && isDownloading){
+        } else if (!isTransferring && isDownloading) {
             isDownloading = false
             refreshTrigger++
             viewModel.retrieveLocalFiles()
+        }
+    }
+
+    LaunchedEffect(isRefreshingRemote) {
+        if (isRefreshingRemote) {
+            viewModel.retrieveRemoteFilesSMB()
+            isRefreshingRemote = false
+        }
+    }
+
+    LaunchedEffect(isRefreshingLocal) {
+        if (isRefreshingLocal) {
+            viewModel.retrieveLocalFiles()
+            isRefreshingLocal = false
         }
     }
 
@@ -127,63 +149,67 @@ fun HomeScreen() {
                             modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                         )
                     }
-                    LazyColumn(
-                        state = remoteListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(start = 8.dp)
-                            .onGloballyPositioned { coordinates ->
-                                remoteListPosition = coordinates.localToRoot(Offset.Zero)
-                                remoteListSize = coordinates.size
-                            }
-                            .pointerInput(Unit) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { offset ->
-                                        val itemHeight = 50.dp.toPx()
-                                        val scrollOffset = remoteListState.firstVisibleItemIndex * itemHeight + remoteListState.firstVisibleItemScrollOffset
-                                        val adjustedY = offset.y + scrollOffset
-                                        val index = (adjustedY / itemHeight).toInt()
-                                        val file = viewModel.remoteFiles.getOrNull(index)
-                                        draggedFile = file
-                                        dragOffset = remoteListPosition?.plus(offset) ?: offset
-                                        dragSource = "remote"
-                                    },
-                                    onDragEnd = {
-                                        if (draggedFile != null && dragOffset != null && dragSource == "remote") {
-                                            val localYTop = localListPosition?.y ?: 0f
-                                            val localYBottom = localYTop + (localListSize?.height ?: 0)
-                                            if (dragOffset!!.y in localYTop..localYBottom) {
-                                                isDownloading = true
-                                                viewModel.downloadFileOrFolder(draggedFile!!)
+                    SwipeRefresh(
+                        state = remoteSwipeRefreshState,
+                        onRefresh = { isRefreshingRemote = true }
+                    ) {
+                        LazyColumn(
+                            state = remoteListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 8.dp)
+                                .onGloballyPositioned { coordinates ->
+                                    remoteListPosition = coordinates.localToRoot(Offset.Zero)
+                                    remoteListSize = coordinates.size
+                                }
+                                .pointerInput(Unit) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { offset ->
+                                            val itemHeight = 50.dp.toPx()
+                                            val scrollOffset = remoteListState.firstVisibleItemIndex * itemHeight + remoteListState.firstVisibleItemScrollOffset
+                                            val adjustedY = offset.y + scrollOffset
+                                            val index = (adjustedY / itemHeight).toInt()
+                                            val file = viewModel.remoteFiles.getOrNull(index)
+                                            draggedFile = file
+                                            dragOffset = remoteListPosition?.plus(offset) ?: offset
+                                            dragSource = "remote"
+                                        },
+                                        onDragEnd = {
+                                            if (draggedFile != null && dragOffset != null && dragSource == "remote") {
+                                                val localYTop = localListPosition?.y ?: 0f
+                                                val localYBottom = localYTop + (localListSize?.height ?: 0)
+                                                if (dragOffset!!.y in localYTop..localYBottom) {
+                                                    isDownloading = true
+                                                    viewModel.downloadFileOrFolder(draggedFile!!)
+                                                }
                                             }
+                                            draggedFile = null
+                                            dragOffset = null
+                                            dragSource = null
+                                        },
+                                        onDragCancel = {
+                                            draggedFile = null
+                                            dragOffset = null
+                                            dragSource = null
+                                        },
+                                        onDrag = { _, dragAmount ->
+                                            dragOffset = dragOffset?.plus(dragAmount)
                                         }
-                                        draggedFile = null
-                                        dragOffset = null
-                                        dragSource = null
+                                    )
+                                }
+                        ) {
+                            items(viewModel.remoteFiles, key = { it.path + it.fileName }) { file ->
+                                FileItem(
+                                    file = file,
+                                    onClick = { /* Handle click */ },
+                                    onSwipeToDelete = {
+                                        fileToDelete = file
+                                        isRemoteFile = true
+                                        showDeleteDialog = true
                                     },
-                                    onDragCancel = {
-                                        draggedFile = null
-                                        dragOffset = null
-                                        dragSource = null
-                                    },
-                                    onDrag = { _, dragAmount ->
-                                        dragOffset = dragOffset?.plus(dragAmount)
-                                    }
+                                    refreshTrigger = refreshTrigger
                                 )
                             }
-                    ) {
-                        // Add a key to ensure each FileItem is recreated when the list changes
-                        items(viewModel.remoteFiles, key = { it.path + it.fileName }) { file ->
-                            FileItem(
-                                file = file,
-                                onClick = { /* Handle click */ },
-                                onSwipeToDelete = {
-                                    fileToDelete = file
-                                    isRemoteFile = true
-                                    showDeleteDialog = true
-                                },
-                                refreshTrigger = refreshTrigger
-                            )
                         }
                     }
                 }
@@ -208,63 +234,67 @@ fun HomeScreen() {
                             modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                         )
                     }
-                    LazyColumn(
-                        state = localListState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(start = 8.dp)
-                            .onGloballyPositioned { coordinates ->
-                                localListPosition = coordinates.localToRoot(Offset.Zero)
-                                localListSize = coordinates.size
-                            }
-                            .pointerInput(Unit) {
-                                detectDragGesturesAfterLongPress(
-                                    onDragStart = { offset ->
-                                        val itemHeight = 50.dp.toPx()
-                                        val scrollOffset = localListState.firstVisibleItemIndex * itemHeight + localListState.firstVisibleItemScrollOffset
-                                        val adjustedY = offset.y + scrollOffset
-                                        val index = (adjustedY / itemHeight).toInt()
-                                        val file = viewModel.localFiles.getOrNull(index)
-                                        draggedFile = file
-                                        dragOffset = localListPosition?.plus(offset) ?: offset
-                                        dragSource = "local"
-                                    },
-                                    onDragEnd = {
-                                        if (draggedFile != null && dragOffset != null && dragSource == "local") {
-                                            val remoteYTop = remoteListPosition?.y ?: 0f
-                                            val remoteYBottom = remoteYTop + (remoteListSize?.height ?: 0)
-                                            if (dragOffset!!.y in remoteYTop..remoteYBottom) {
-                                                isUploading = true
-                                                viewModel.uploadFileOrFolder(draggedFile!!)
+                    SwipeRefresh(
+                        state = localSwipeRefreshState,
+                        onRefresh = { isRefreshingLocal = true }
+                    ) {
+                        LazyColumn(
+                            state = localListState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = 8.dp)
+                                .onGloballyPositioned { coordinates ->
+                                    localListPosition = coordinates.localToRoot(Offset.Zero)
+                                    localListSize = coordinates.size
+                                }
+                                .pointerInput(Unit) {
+                                    detectDragGesturesAfterLongPress(
+                                        onDragStart = { offset ->
+                                            val itemHeight = 50.dp.toPx()
+                                            val scrollOffset = localListState.firstVisibleItemIndex * itemHeight + localListState.firstVisibleItemScrollOffset
+                                            val adjustedY = offset.y + scrollOffset
+                                            val index = (adjustedY / itemHeight).toInt()
+                                            val file = viewModel.localFiles.getOrNull(index)
+                                            draggedFile = file
+                                            dragOffset = localListPosition?.plus(offset) ?: offset
+                                            dragSource = "local"
+                                        },
+                                        onDragEnd = {
+                                            if (draggedFile != null && dragOffset != null && dragSource == "local") {
+                                                val remoteYTop = remoteListPosition?.y ?: 0f
+                                                val remoteYBottom = remoteYTop + (remoteListSize?.height ?: 0)
+                                                if (dragOffset!!.y in remoteYTop..remoteYBottom) {
+                                                    isUploading = true
+                                                    viewModel.uploadFileOrFolder(draggedFile!!)
+                                                }
                                             }
+                                            draggedFile = null
+                                            dragOffset = null
+                                            dragSource = null
+                                        },
+                                        onDragCancel = {
+                                            draggedFile = null
+                                            dragOffset = null
+                                            dragSource = null
+                                        },
+                                        onDrag = { _, dragAmount ->
+                                            dragOffset = dragOffset?.plus(dragAmount)
                                         }
-                                        draggedFile = null
-                                        dragOffset = null
-                                        dragSource = null
+                                    )
+                                }
+                        ) {
+                            items(viewModel.localFiles, key = { it.path + it.fileName }) { file ->
+                                FileItem(
+                                    file = file,
+                                    onClick = { /* Handle click */ },
+                                    onSwipeToDelete = {
+                                        fileToDelete = file
+                                        isRemoteFile = false
+                                        showDeleteDialog = true
                                     },
-                                    onDragCancel = {
-                                        draggedFile = null
-                                        dragOffset = null
-                                        dragSource = null
-                                    },
-                                    onDrag = { _, dragAmount ->
-                                        dragOffset = dragOffset?.plus(dragAmount)
-                                    }
+                                    refreshTrigger = refreshTrigger
                                 )
                             }
-                    ) {
-                        // Add a key to ensure each FileItem is recreated when the list changes
-                        items(viewModel.localFiles, key = { it.path + it.fileName }) { file ->
-                            FileItem(
-                                file = file,
-                                onClick = { /* Handle click */ },
-                                onSwipeToDelete = {
-                                    fileToDelete = file
-                                    isRemoteFile = false
-                                    showDeleteDialog = true
-                                },
-                                refreshTrigger = refreshTrigger
-                            )
                         }
                     }
                 }

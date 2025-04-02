@@ -60,4 +60,6 @@ dependencies {
     implementation(libs.com.gson)
     implementation(libs.com.dexter)
     implementation(libs.com.smbj)
+
+    implementation ("com.google.accompanist:accompanist-swiperefresh:0.27.0")
 }
