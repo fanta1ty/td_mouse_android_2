@@ -96,6 +96,18 @@ fun HomeScreen() {
         }
     }
 
+    LaunchedEffect(isTransferring) {
+        if (!isTransferring && isUploading) {
+            isUploading = false
+            refreshTrigger++
+            viewModel.retrieveRemoteFilesSMB()
+        } else if (!isTransferring && isDownloading) {
+            isDownloading = false
+            refreshTrigger++
+            viewModel.retrieveLocalFiles()
+        }
+    }
+
     LaunchedEffect(isRefreshingRemote) {
         if (isRefreshingRemote) {
             viewModel.retrieveRemoteFilesSMB()

@@ -18,7 +18,11 @@ interface SambaService {
 
     fun uploadFileSMB(fileName: String)
 
+    fun uploadFolderSMB(folderName: String)
+
     fun downloadFileSMB(fileName: String)
+
+    fun downloadFolderSMB(folderName: String)
 
     fun updateSMBState(state: SMBState)
 

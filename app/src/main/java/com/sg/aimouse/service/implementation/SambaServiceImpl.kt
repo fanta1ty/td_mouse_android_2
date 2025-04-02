@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -310,7 +311,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 var bytesRead: Int
                 val startTime = System.currentTimeMillis()
 
-                // **🔹 CoroutineFlow for Smooth Progress Updates**
+                // CoroutineFlow for Smooth Progress Updates**
                 val progressFlow = flow {
                     while (true) {
                         bytesRead = inputStream.read(buffer)
@@ -332,7 +333,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                     }
                 }.flowOn(Dispatchers.IO)
 
-                // **🔹 Collect Progress Smoothly on UI Thread**
+                // Collect Progress Smoothly on UI Thread**
                 progressFlow.collect { bytesReadSoFar ->
                     _transferProgress = bytesReadSoFar.toFloat() / fileSize
 
@@ -360,7 +361,142 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         }
     }
 
+    override fun uploadFolderSMB(localFolderPath: String) {
+        coroutineScope.launch(Dispatchers.IO) {
+            _isTransferringFileSMB = true
+            try {
+                if (diskShare == null) throw RuntimeException("Disk share is null")
 
+                val localFolder = JavaFile(localFolderPath)
+                if (!localFolder.exists() || !localFolder.isDirectory) {
+                    withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
+                    return@launch
+                }
+
+                val relativePath = localFolder.name
+                diskShare!!.mkdir(relativePath)
+
+                localFolder.walkTopDown().forEach { file ->
+                    if (file.isFile) {
+                        val remotePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                        val remoteFile = diskShare!!.openFile(
+                            remotePath,
+                            setOf(AccessMask.GENERIC_WRITE),
+                            null,
+                            SMB2ShareAccess.ALL,
+                            SMB2CreateDisposition.FILE_OVERWRITE_IF,
+                            null
+                        )
+
+                        FileInputStream(file).use { inputStream ->
+                            remoteFile.outputStream.use { outputStream ->
+                                transferFile(inputStream, outputStream, file.length())
+                            }
+                        }
+                    } else if (file.isDirectory && file != localFolder) {
+                        val dirPath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                        diskShare!!.mkdir(dirPath)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    toast(R.string.upload_file_succeeded)
+                    retrieveRemoteFilesSMB()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            }
+            _isTransferringFileSMB = false
+        }
+    }
+
+    override fun downloadFolderSMB(remoteFolderName: String) {
+        coroutineScope.launch(Dispatchers.IO) {
+            _isTransferringFileSMB = true
+            try {
+                if (diskShare == null) throw RuntimeException("Disk share is null")
+
+                val processedFolders = mutableSetOf<String>()
+
+                suspend fun downloadFolderRecursively(folderPath: String, localBaseDir: JavaFile) {
+                    if (processedFolders.contains(folderPath)) {
+                        return
+                    }
+                    processedFolders.add(folderPath)
+
+                    val remoteFolder = diskShare!!.openDirectory(
+                        folderPath,
+                        setOf(AccessMask.GENERIC_READ),
+                        null,
+                        SMB2ShareAccess.ALL,
+                        SMB2CreateDisposition.FILE_OPEN,
+                        null
+                    ) ?: run {
+                        Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open directory: $folderPath")
+                        throw RuntimeException("Cannot open directory: $folderPath")
+                    }
+
+                    val localFolder = JavaFile(localBaseDir, folderPath)
+                    localFolder.mkdirs()
+
+                    val fileList = remoteFolder.list()
+
+                    fileList.forEach { fileInfo ->
+                        val fileName = fileInfo.fileName
+                        if (fileName == "." || fileName == "..") {
+                            return@forEach
+                        }
+
+                        val isDir = EnumWithValue.EnumUtils.isSet(fileInfo.fileAttributes, FileAttributes.FILE_ATTRIBUTE_DIRECTORY)
+                        val remoteFilePath = if (folderPath.isEmpty()) fileName else "$folderPath${JavaFile.separator}$fileName"
+
+                        if (isDir) {
+                            downloadFolderRecursively(remoteFilePath, localBaseDir)
+                        } else {
+                            val localFile = JavaFile(localFolder, fileName)
+
+                            val remoteFile = diskShare!!.openFile(
+                                remoteFilePath,
+                                setOf(AccessMask.GENERIC_READ),
+                                null,
+                                SMB2ShareAccess.ALL,
+                                SMB2CreateDisposition.FILE_OPEN,
+                                null
+                            )
+
+                            val fileSize = remoteFile.getFileInformation(FileStandardInformation::class.java).endOfFile
+
+                            val inputStream = remoteFile.inputStream
+                            val outputStream = FileOutputStream(localFile)
+
+                            transferFile(inputStream, outputStream, fileSize)
+
+                            inputStream.close()
+                            outputStream.close()
+                            remoteFile.close()
+                        }
+                    }
+                    remoteFolder.close()
+                }
+
+                val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+
+                downloadFolderRecursively(remoteFolderName, downloadDir)
+
+                withContext(Dispatchers.Main) {
+                    toast(R.string.save_file_succeeded)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Error during download: ${e.message}")
+                withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
+                _smbState.value = SMBState.RECONNECT
+            }
+            _isTransferringFileSMB = false
+        }
+    }
 
     override fun updateSMBState(state: SMBState) {
         _smbState.value = state

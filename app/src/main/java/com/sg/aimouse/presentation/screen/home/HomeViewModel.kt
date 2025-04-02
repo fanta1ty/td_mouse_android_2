@@ -30,8 +30,7 @@ class HomeViewModel(
 
     fun uploadFileOrFolder(file: File) {
         if (file.isDirectory) {
-            val localFiles = localFiles.filter { it.path.startsWith(file.path) }
-            localFiles.forEach { uploadFileSMB(it.fileName) }
+            uploadFolderSMB(file.path)
         } else {
             uploadFileSMB(file.fileName)
         }
@@ -39,8 +38,7 @@ class HomeViewModel(
 
     fun downloadFileOrFolder(file: File) {
         if (file.isDirectory) {
-            val remoteFiles = remoteFiles.filter { it.path.startsWith(file.path) }
-            remoteFiles.forEach { downloadFileSMB(it.fileName) }
+            downloadFolderSMB(file.fileName)
         } else {
             downloadFileSMB(file.fileName)
         }
