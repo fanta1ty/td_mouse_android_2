@@ -234,18 +234,16 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
     override fun uploadFileSMB(fileName: String) {
         coroutineScope.launch {
             _isTransferringFileSMB = true
+            var remoteFile: com.hierynomus.smbj.share.File? = null
 
             try {
-                if (diskShare == null) throw RuntimeException()
-
-                diskShare!!.apply {
+                diskShare?.let { share ->
                     val downloadDir = Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS
                     )
-
                     val localFile = JavaFile(downloadDir, fileName)
 
-                    val remoteFile = openFile(
+                    remoteFile = share.openFile(
                         fileName,
                         setOf(AccessMask.GENERIC_WRITE),
                         null,
@@ -255,24 +253,28 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                     )
 
                     FileInputStream(localFile).use { inputStream ->
-                        remoteFile.outputStream.use { outputStream ->
+                        remoteFile?.outputStream?.use { outputStream ->
                             transferFile(inputStream, outputStream, localFile.length())
                         }
                     }
 
-                    withContext(Dispatchers.Main) { toast(R.string.upload_file_succeeded) }
-                }
-            } catch (e: IOException) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
-                _smbState.value = SMBState.RECONNECT
-            } catch (e: RuntimeException) {
-                e.printStackTrace()
-                withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
-                _smbState.value = SMBState.RECONNECT
-            }
+                    remoteFile?.close()
+                    remoteFile = null
 
-            _isTransferringFileSMB = false
+                    withContext(Dispatchers.Main) {
+                        toast(R.string.upload_file_succeeded)
+                    }
+                }
+            } catch (e: Exception) {
+                remoteFile?.close()
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    toast(R.string.upload_file_error)
+                }
+                _smbState.value = SMBState.RECONNECT
+            } finally {
+                _isTransferringFileSMB = false
+            }
         }
     }
 
