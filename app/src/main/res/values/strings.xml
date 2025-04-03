@@ -40,4 +40,5 @@
     <string name="uploading">Uploading...</string>
     <string name="delete_file_succeeded">File deleted successfully!</string>
     <string name="delete_file_error">Failed to delete file!</string>
+    <string name="transfer_summary">Summary Info</string>
 </resources>

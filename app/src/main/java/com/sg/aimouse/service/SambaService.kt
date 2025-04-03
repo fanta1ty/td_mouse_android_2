@@ -2,6 +2,7 @@ package com.sg.aimouse.service
 
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.implementation.SMBState
+import com.sg.aimouse.service.implementation.SambaServiceImpl.TransferStats
 
 interface SambaService {
 
@@ -11,20 +12,12 @@ interface SambaService {
     val transferProgress: Float
 
     fun connectSMB()
-
     fun closeSMB(isRelease: Boolean = false)
-
     fun retrieveRemoteFilesSMB(folderName: String = "")
-
-    fun uploadFileSMB(fileName: String)
-
-    fun uploadFolderSMB(folderName: String)
-
-    fun downloadFileSMB(fileName: String)
-
-    fun downloadFolderSMB(folderName: String)
-
+    suspend fun uploadFileSMB(fileName: String): TransferStats?
+    suspend fun downloadFileSMB(fileName: String): TransferStats?
+    suspend fun uploadFolderSMB(folderName: String): TransferStats?
+    suspend fun downloadFolderSMB(folderName: String): TransferStats?
     fun updateSMBState(state: SMBState)
-
     fun deleteFileSMB(fileName: String)
 }

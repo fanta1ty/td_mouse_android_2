@@ -35,6 +35,7 @@ import com.sg.aimouse.presentation.component.Dialog
 import com.sg.aimouse.presentation.component.FileItem
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.component.ProgressDialog
+import com.sg.aimouse.presentation.component.TransferCompleteDialog
 import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
 import com.sg.aimouse.service.implementation.SMBState
@@ -137,6 +138,18 @@ fun HomeScreen() {
 
     Scaffold { innerPaddings ->
         Box(modifier = Modifier.fillMaxSize()) {
+            if (viewModel.showTransferDialog.value && viewModel.lastTransferStats != null && viewModel.lastTransferredFileName != null) {
+                TransferCompleteDialog(
+                    fileName = viewModel.lastTransferredFileName!!,
+                    fileSize = viewModel.lastTransferStats!!.fileSize,
+                    avgSpeedMBps = viewModel.lastTransferStats!!.avgSpeedMBps,
+                    maxSpeedMBps = viewModel.lastTransferStats!!.maxSpeedMBps,
+                    timeTakenSeconds = viewModel.lastTransferStats!!.timeTakenSeconds,
+                    onDismiss = {
+                        viewModel.showTransferDialog.value = false
+                    }
+                )
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
