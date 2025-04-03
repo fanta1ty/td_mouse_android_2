@@ -364,6 +364,8 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
     override fun uploadFolderSMB(localFolderPath: String) {
         coroutineScope.launch(Dispatchers.IO) {
             _isTransferringFileSMB = true
+            val openHandles = mutableListOf<AutoCloseable>()
+
             try {
                 if (diskShare == null) throw RuntimeException("Disk share is null")
 
@@ -377,25 +379,34 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 diskShare!!.mkdir(relativePath)
 
                 localFolder.walkTopDown().forEach { file ->
-                    if (file.isFile) {
-                        val remotePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
-                        val remoteFile = diskShare!!.openFile(
-                            remotePath,
-                            setOf(AccessMask.GENERIC_WRITE),
-                            null,
-                            SMB2ShareAccess.ALL,
-                            SMB2CreateDisposition.FILE_OVERWRITE_IF,
-                            null
-                        )
+                    try {
+                        if (file.isFile) {
+                            val remotePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                            val remoteFile = diskShare!!.openFile(
+                                remotePath,
+                                setOf(AccessMask.GENERIC_WRITE),
+                                null,
+                                SMB2ShareAccess.ALL,
+                                SMB2CreateDisposition.FILE_OVERWRITE_IF,
+                                null
+                            )
+                            openHandles.add(remoteFile)
 
-                        FileInputStream(file).use { inputStream ->
-                            remoteFile.outputStream.use { outputStream ->
-                                transferFile(inputStream, outputStream, file.length())
+                            FileInputStream(file).use { inputStream ->
+                                remoteFile.outputStream.use { outputStream ->
+                                    transferFile(inputStream, outputStream, file.length())
+                                }
                             }
+
+                            // Close file after upload
+                            remoteFile.close()
+                            openHandles.remove(remoteFile)
+                        } else if (file.isDirectory && file != localFolder) {
+                            val dirPath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                            diskShare!!.mkdir(dirPath)
                         }
-                    } else if (file.isDirectory && file != localFolder) {
-                        val dirPath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
-                        diskShare!!.mkdir(dirPath)
+                    } catch (e: Exception) {
+                        Log.e(AiMouseSingleton.DEBUG_TAG, "Error uploading ${file.path}", e)
                     }
                 }
 
@@ -407,8 +418,19 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
                 _smbState.value = SMBState.RECONNECT
+            } finally {
+                // Close all open handles
+                openHandles.forEach { handle ->
+                    try {
+                        handle.close()
+                    } catch (e: Exception) {
+                        Log.e(AiMouseSingleton.DEBUG_TAG, "Error closing handle", e)
+                    }
+                }
+                _isTransferringFileSMB = false
+
+                delay(500)
             }
-            _isTransferringFileSMB = false
         }
     }
 
@@ -421,9 +443,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 val processedFolders = mutableSetOf<String>()
 
                 suspend fun downloadFolderRecursively(folderPath: String, localBaseDir: JavaFile) {
-                    if (processedFolders.contains(folderPath)) {
-                        return
-                    }
+                    if (processedFolders.contains(folderPath)) return
                     processedFolders.add(folderPath)
 
                     val remoteFolder = diskShare!!.openDirectory(
@@ -434,7 +454,6 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                         SMB2CreateDisposition.FILE_OPEN,
                         null
                     ) ?: run {
-                        Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open directory: $folderPath")
                         throw RuntimeException("Cannot open directory: $folderPath")
                     }
 
@@ -490,7 +509,6 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Error during download: ${e.message}")
                 withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
                 _smbState.value = SMBState.RECONNECT
             }
