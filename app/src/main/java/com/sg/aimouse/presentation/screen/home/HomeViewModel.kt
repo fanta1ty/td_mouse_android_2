@@ -38,6 +38,9 @@ class HomeViewModel(
     )
         private set
 
+    var currentRemotePath by mutableStateOf("")
+        private set
+
     init {
         retrieveLocalFiles()
         if (sambaService != null) {
@@ -57,6 +60,29 @@ class HomeViewModel(
         if (parent != null && parent.exists()) {
             currentLocalPath = parent.path
             openFolder(currentLocalPath)
+        }
+    }
+
+    fun openRemoteFolder(folder: File) {
+        if (folder.isDirectory) {
+            val newPath = if (currentRemotePath.isEmpty()) {
+                folder.fileName
+            } else {
+                "$currentRemotePath/${folder.fileName}"
+            }
+            currentRemotePath = newPath
+            retrieveRemoteFilesSMB(newPath)
+        }
+    }
+
+    fun navigateUpRemote() {
+        val parts = currentRemotePath.split("/")
+        if (parts.size > 1) {
+            currentRemotePath = parts.dropLast(1).joinToString("/")
+            retrieveRemoteFilesSMB(currentRemotePath)
+        } else {
+            currentRemotePath = ""
+            retrieveRemoteFilesSMB("")
         }
     }
 

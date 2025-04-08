@@ -186,7 +186,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
 
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
-                        "",
+                        folderName,
                         setOf(AccessMask.GENERIC_READ),
                         null,
                         SMB2ShareAccess.ALL,

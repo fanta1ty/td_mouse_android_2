@@ -177,6 +177,33 @@ fun HomeScreen() {
                             modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                         )
                     }
+                    if (viewModel.currentRemotePath.isNotEmpty()) {
+                        IconButton(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .height(40.dp),
+                            onClick = {
+                                viewModel.navigateUpRemote()
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(start = 14.dp),
+                                horizontalArrangement = Arrangement.Start
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back to parent folder",
+                                    tint = Color.Black
+                                )
+                                Text(
+                                    text = " ...",
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
                     SwipeRefresh(
                         state = remoteSwipeRefreshState,
                         onRefresh = { isRefreshingRemote = true }
@@ -229,7 +256,13 @@ fun HomeScreen() {
                             items(viewModel.remoteFiles, key = { it.path + it.fileName }) { file ->
                                 FileItem(
                                     file = file,
-                                    onClick = { /* Handle click */ },
+                                    onClick = {
+                                        if (file.isDirectory) {
+                                            viewModel.openRemoteFolder(file)
+                                        } else {
+                                            // Handle click file
+                                        }
+                                    },
                                     onSwipeToDelete = {
                                         fileToDelete = file
                                         isRemoteFile = true
