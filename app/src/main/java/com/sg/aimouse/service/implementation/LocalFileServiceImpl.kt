@@ -91,6 +91,28 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
         }
     }
 
+    override fun openFolder(folderPath: String) {
+        coroutineScope.launch {
+            val folder = JavaFile(folderPath)
+            if (folder.exists() && folder.isDirectory) {
+                val files = folder.listFiles()?.map { file ->
+                    File(
+                        fileName = file.name,
+                        size = if (!file.isDirectory) file.length() else 0,
+                        path = file.path,
+                        isDirectory = file.isDirectory,
+                        createdTime = file.lastModified()
+                    )
+                }?.sortedByDescending { it.createdTime } ?: emptyList()
+
+                withContext(Dispatchers.Main) {
+                    _localFiles.clear()
+                    _localFiles.addAll(files)
+                }
+            }
+        }
+    }
+
     private fun toast(@StringRes msgId: Int) {
         Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()
     }

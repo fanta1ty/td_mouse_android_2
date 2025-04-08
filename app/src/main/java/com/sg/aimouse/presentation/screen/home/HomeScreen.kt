@@ -2,6 +2,7 @@
 
 package com.sg.aimouse.presentation.screen.home
 
+import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -9,6 +10,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -259,6 +262,36 @@ fun HomeScreen() {
                             modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
                         )
                     }
+                    // Back button
+                    val downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+                    val currentPath = viewModel.currentLocalPath
+                    if (currentPath != downloadsPath) {
+                        IconButton(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Color.White)
+                                .height(40.dp),
+                            onClick = {
+                                viewModel.navigateUpLocal()
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(start = 14.dp),
+                                horizontalArrangement = Arrangement.Start
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back to parent folder",
+                                    tint = Color.Black
+                                )
+                                Text(
+                                    text = " ...",
+                                    color = Color.Black,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                            }
+                        }
+                    }
                     SwipeRefresh(
                         state = localSwipeRefreshState,
                         onRefresh = { isRefreshingLocal = true }
@@ -311,7 +344,13 @@ fun HomeScreen() {
                             items(viewModel.localFiles, key = { it.path + it.fileName }) { file ->
                                 FileItem(
                                     file = file,
-                                    onClick = { /* Handle click */ },
+                                    onClick = {
+                                        if (file.isDirectory) {
+                                            viewModel.openLocalFolder(file)
+                                        } else {
+                                            // Handle click file
+                                        }
+                                    },
                                     onSwipeToDelete = {
                                         fileToDelete = file
                                         isRemoteFile = false

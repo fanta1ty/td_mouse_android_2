@@ -11,4 +11,6 @@ interface LocalFileService {
     fun saveFile(data: ByteArray, fileName: String)
 
     fun deleteFile(filePath: String)
+
+    fun openFolder(folderPath: String)
 }

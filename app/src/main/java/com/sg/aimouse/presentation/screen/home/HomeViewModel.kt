@@ -15,6 +15,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File as JavaFile
+import android.os.Environment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 
 class HomeViewModel(
     context: Context,
@@ -29,10 +33,30 @@ class HomeViewModel(
     var showTransferDialog = mutableStateOf(false)
     var lastTransferredFileName: String? = null
 
+    var currentLocalPath by mutableStateOf(
+        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+    )
+        private set
+
     init {
         retrieveLocalFiles()
         if (sambaService != null) {
             retrieveRemoteFilesSMB()
+        }
+    }
+
+    fun openLocalFolder(folder: File) {
+        if (folder.isDirectory) {
+            currentLocalPath = folder.path
+            openFolder(folder.path)
+        }
+    }
+
+    fun navigateUpLocal() {
+        val parent = JavaFile(currentLocalPath).parentFile
+        if (parent != null && parent.exists()) {
+            currentLocalPath = parent.path
+            openFolder(currentLocalPath)
         }
     }
 
