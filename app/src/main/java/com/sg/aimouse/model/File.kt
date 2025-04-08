@@ -23,7 +23,11 @@ data class File(
 
     private fun shortenFileName(): String {
         return if (isDirectory) {
-            "${fileName.take(8)}...${fileName.takeLast(7)}"
+            if (fileName.length <= 30) {
+                fileName
+            } else {
+                "${fileName.take(23)}...${fileName.takeLast(7)}"
+            }
         } else {
             val extensionIndex = fileName.lastIndexOf('.')
             if (extensionIndex == -1
@@ -31,19 +35,19 @@ data class File(
                 || extensionIndex == fileName.length - 1
             ) {
                 // No valid extension found
-                if (fileName.length <= 15) {
+                if (fileName.length <= 30) {
                     fileName
                 } else {
-                    "${fileName.take(8)}...${fileName.takeLast(7)}"
+                    "${fileName.take(23)}...${fileName.takeLast(7)}"
                 }
             } else {
                 // Valid extension exists
                 val namePart = fileName.substring(0, extensionIndex)
                 val extension = fileName.substring(extensionIndex)
-                if (namePart.length <= 15) {
+                if (namePart.length <= 30) {
                     fileName
                 } else {
-                    "${namePart.take(8)}...${namePart.takeLast(7)}$extension"
+                    "${namePart.take(23)}...${namePart.takeLast(7)}$extension"
                 }
             }
         }
