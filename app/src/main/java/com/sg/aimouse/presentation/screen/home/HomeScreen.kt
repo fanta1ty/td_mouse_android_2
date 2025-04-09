@@ -2,6 +2,8 @@
 
 package com.sg.aimouse.presentation.screen.home
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Environment
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -26,6 +28,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.IntSize
+import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -34,15 +37,12 @@ import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import com.sg.aimouse.R
 import com.sg.aimouse.model.File
-import com.sg.aimouse.presentation.component.Dialog
-import com.sg.aimouse.presentation.component.FileItem
-import com.sg.aimouse.presentation.component.LocalActivity
-import com.sg.aimouse.presentation.component.ProgressDialog
-import com.sg.aimouse.presentation.component.TransferCompleteDialog
+import com.sg.aimouse.presentation.component.*
 import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
 import com.sg.aimouse.service.implementation.SMBState
 import com.sg.aimouse.util.viewModelFactory
+import java.io.File as JavaFile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +78,6 @@ fun HomeScreen() {
     var showDeleteDialog by remember { mutableStateOf(false) }
     var refreshTrigger by remember { mutableStateOf(0) }
 
-    // Refresh state for SwipeRefresh
     var isRefreshingRemote by remember { mutableStateOf(false) }
     var isRefreshingLocal by remember { mutableStateOf(false) }
     val remoteSwipeRefreshState = rememberSwipeRefreshState(isRefreshingRemote)
@@ -87,18 +86,6 @@ fun HomeScreen() {
     val transferProgress = viewModel.transferProgress
     val transferSpeed = viewModel.transferSpeed
     val isTransferring = viewModel.isTransferringFileSMB
-
-    LaunchedEffect(isTransferring) {
-        if (!isTransferring && isUploading) {
-            isUploading = false
-            refreshTrigger++
-            viewModel.retrieveRemoteFilesSMB()
-        } else if (!isTransferring && isDownloading) {
-            isDownloading = false
-            refreshTrigger++
-            viewModel.retrieveLocalFiles()
-        }
-    }
 
     LaunchedEffect(isTransferring) {
         if (!isTransferring && isUploading) {
@@ -260,7 +247,7 @@ fun HomeScreen() {
                                         if (file.isDirectory) {
                                             viewModel.openRemoteFolder(file)
                                         } else {
-                                            // Handle click file
+                                            // Handle remote file click (to be implemented later)
                                         }
                                     },
                                     onSwipeToDelete = {
@@ -381,7 +368,47 @@ fun HomeScreen() {
                                         if (file.isDirectory) {
                                             viewModel.openLocalFolder(file)
                                         } else {
-                                            // Handle click file
+                                            val extension = file.fileName.substringAfterLast(".", "").lowercase()
+                                            val javaFile = JavaFile(file.path)
+                                            val uri = FileProvider.getUriForFile(
+                                                activity,
+                                                "${activity.packageName}.fileprovider",
+                                                javaFile
+                                            )
+                                            when (extension) {
+                                                "mp4", "avi", "mp3", "wav" -> {
+                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, when (extension) {
+                                                            "mp4", "avi" -> "video/*"
+                                                            else -> "audio/*"
+                                                        })
+                                                        setPackage("org.videolan.vlc") // Specify VLC package
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) // Grant permission to VLC
+                                                    }
+                                                    try {
+                                                        activity.startActivity(intent)
+                                                    } catch (e: Exception) {
+                                                        val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
+                                                            setDataAndType(uri, when (extension) {
+                                                                "mp4", "avi" -> "video/*"
+                                                                else -> "audio/*"
+                                                            })
+                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                        }
+                                                        activity.startActivity(fallbackIntent)
+                                                    }
+                                                }
+                                                "jpg", "jpeg", "png" -> {
+                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, "image/*")
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    activity.startActivity(intent)
+                                                }
+                                            }
                                         }
                                     },
                                     onSwipeToDelete = {

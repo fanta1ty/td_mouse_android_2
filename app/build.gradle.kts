@@ -62,4 +62,5 @@ dependencies {
     implementation(libs.com.smbj)
 
     implementation ("com.google.accompanist:accompanist-swiperefresh:0.27.0")
+    implementation("org.videolan.android:libvlc-all:3.6.0")
 }
