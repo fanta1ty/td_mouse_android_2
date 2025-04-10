@@ -382,9 +382,9 @@ fun HomeScreen() {
                                                             "mp4", "avi" -> "video/*"
                                                             else -> "audio/*"
                                                         })
-                                                        setPackage("org.videolan.vlc") // Specify VLC package
+                                                        setPackage("org.videolan.vlc")
                                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) // Grant permission to VLC
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                     }
                                                     try {
                                                         activity.startActivity(intent)
@@ -403,6 +403,14 @@ fun HomeScreen() {
                                                 "jpg", "jpeg", "png" -> {
                                                     val intent = Intent(Intent.ACTION_VIEW).apply {
                                                         setDataAndType(uri, "image/*")
+                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                                    }
+                                                    activity.startActivity(intent)
+                                                }
+                                                "txt" -> {
+                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                                        setDataAndType(uri, "text/plain")
                                                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                                     }
