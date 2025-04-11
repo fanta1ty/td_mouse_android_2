@@ -165,9 +165,27 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
     override fun closeSMB(isRelease: Boolean) {
         coroutineScope.launch {
             try {
-                diskShare?.close()
-                session?.close()
-                connection?.close()
+                // Close resources in reverse order of creation
+                try {
+                    diskShare?.close()
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close disk share", e)
+                }
+                diskShare = null
+
+                try {
+                    session?.close()
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close session", e)
+                }
+                session = null
+
+                try {
+                    connection?.close()
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close connection", e)
+                }
+                connection = null
             } catch (e: Exception) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to close Samba connection", e)
             }
