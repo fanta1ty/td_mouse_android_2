@@ -137,7 +137,7 @@ class HomeViewModel(
     }
 
     private fun isMediaFile(fileName: String): Boolean {
-        val mediaExtensions = listOf(".mp4", ".avi", ".mp3", ".wav", ".jpg", ".jpeg", ".png")
+        val mediaExtensions = listOf(".mp4", ".avi", ".mp3", ".wav", ".jpg", ".jpeg", ".png", ".txt")
         return mediaExtensions.any { fileName.lowercase().endsWith(it) }
     }
 
@@ -178,6 +178,7 @@ class HomeViewModel(
                                     file.fileName.endsWith(".jpg", true) ||
                                     file.fileName.endsWith(".jpeg", true) -> "image/jpeg"
                                     file.fileName.endsWith(".png", true) -> "image/png"
+                                    file.fileName.endsWith(".txt", true) -> "text/plain"
                                     file.fileName.endsWith(".mp4", true) -> "video/mp4"
                                     file.fileName.endsWith(".avi", true) -> "video/x-msvideo"
                                     file.fileName.endsWith(".mp3", true) -> "audio/mpeg"
