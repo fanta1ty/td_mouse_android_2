@@ -1,7 +1,10 @@
 package com.sg.aimouse.presentation.screen.home
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.BluetoothService
@@ -19,9 +22,12 @@ import java.io.File as JavaFile
 import android.os.Environment
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import android.widget.Toast
+import android.util.Log
+import com.sg.aimouse.common.AiMouseSingleton
 
 class HomeViewModel(
-    context: Context,
+    private val context: Context,
     private val sambaService: SambaService? = null
 ) : ViewModel(),
     BluetoothService by BluetoothServiceImplLocal(context),
@@ -127,6 +133,93 @@ class HomeViewModel(
             } else {
                 deleteFile(file.path)
             }
+        }
+    }
+
+    private fun isMediaFile(fileName: String): Boolean {
+        val mediaExtensions = listOf(".mp4", ".avi", ".mp3", ".wav", ".jpg", ".jpeg", ".png")
+        return mediaExtensions.any { fileName.lowercase().endsWith(it) }
+    }
+
+    fun openRemoteFile(file: File) {
+        if (!file.isDirectory && isMediaFile(file.fileName)) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // Download to downloads directory first since that's where downloadFileSMB saves files
+                    val stats = downloadFileSMB(file.fileName)
+                    if (stats != null) {
+                        withContext(Dispatchers.Main) {
+                            try {
+                                // Get the downloaded file from downloads directory
+                                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+                                val downloadedFile = JavaFile(downloadsDir, file.fileName)
+
+                                if (!downloadedFile.exists()) {
+                                    throw Exception("Downloaded file not found in downloads directory")
+                                }
+                                
+                                // Copy to cache directory
+                                val cacheDir = context.cacheDir
+                                val tempFile = JavaFile(cacheDir, file.fileName)
+                                downloadedFile.copyTo(tempFile, overwrite = true)
+                                
+                                // Delete the file from downloads directory since we have it in cache
+                                val deleted = downloadedFile.delete()
+
+                                // Create content URI using FileProvider
+                                val contentUri = FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    tempFile
+                                )
+
+                                // Create intent to open media file
+                                val mimeType = when {
+                                    file.fileName.endsWith(".jpg", true) ||
+                                    file.fileName.endsWith(".jpeg", true) -> "image/jpeg"
+                                    file.fileName.endsWith(".png", true) -> "image/png"
+                                    file.fileName.endsWith(".mp4", true) -> "video/mp4"
+                                    file.fileName.endsWith(".avi", true) -> "video/x-msvideo"
+                                    file.fileName.endsWith(".mp3", true) -> "audio/mpeg"
+                                    file.fileName.endsWith(".wav", true) -> "audio/x-wav"
+                                    else -> "*/*"
+                                }
+
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(contentUri, mimeType)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                
+                                // Check if there's an app that can handle this intent
+                                val packageManager = context.packageManager
+                                val activities = packageManager.queryIntentActivities(intent, 0)
+                                if (activities.isEmpty()) {
+                                    throw Exception("No app found to handle $mimeType files")
+                                }
+                                
+                                // Start activity with chooser
+                                val chooserIntent = Intent.createChooser(intent, "Open with")
+                                chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                context.startActivity(chooserIntent)
+                            } catch (e: Exception) {
+                                Log.e(AiMouseSingleton.DEBUG_TAG, "Error in UI thread while opening media file", e)
+                                Toast.makeText(context, "Error opening media file: ${e.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Failed to download media file", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Error downloading media file", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error downloading media file: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        } else if (file.isDirectory) {
+            openRemoteFolder(file)
         }
     }
 

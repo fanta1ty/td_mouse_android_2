@@ -26,8 +26,8 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.zIndex
 import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -247,7 +247,7 @@ fun HomeScreen() {
                                         if (file.isDirectory) {
                                             viewModel.openRemoteFolder(file)
                                         } else {
-                                            // Handle remote file click (to be implemented later)
+                                            viewModel.openRemoteFile(file)
                                         }
                                     },
                                     onSwipeToDelete = {
