@@ -15,7 +15,7 @@ interface SambaService {
     fun closeSMB(isRelease: Boolean = false)
     fun retrieveRemoteFilesSMB(folderName: String = "")
     suspend fun uploadFileSMB(fileName: String): TransferStats?
-    suspend fun downloadFileSMB(fileName: String): TransferStats?
+    suspend fun downloadFileSMB(fileName: String, targetDirectory: java.io.File? = null): TransferStats?
     suspend fun uploadFolderSMB(folderName: String): TransferStats?
     suspend fun downloadFolderSMB(folderName: String): TransferStats?
     fun updateSMBState(state: SMBState)

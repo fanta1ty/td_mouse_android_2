@@ -16,6 +16,7 @@ import com.sg.aimouse.service.implementation.SambaServiceImpl
 import com.sg.aimouse.service.implementation.SambaServiceImpl.TransferStats
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File as JavaFile
@@ -145,26 +146,25 @@ class HomeViewModel(
         if (!file.isDirectory && isMediaFile(file.fileName)) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    // Download to downloads directory first since that's where downloadFileSMB saves files
-                    val stats = downloadFileSMB(file.fileName)
+                    // Create a unique temp file to avoid conflicts
+                    val cacheDir = JavaFile(context.cacheDir, "media_preview")
+                    cacheDir.mkdirs()
+                    
+                    // Use timestamp to make filename unique
+                    val timestamp = System.currentTimeMillis()
+                    val tempFileName = "${timestamp}_${file.fileName}"
+                    val tempFile = JavaFile(cacheDir, tempFileName)
+                    
+                    // Download directly to cache
+                    val stats = downloadFileSMB(file.fileName, tempFile.parentFile)
                     if (stats != null) {
                         withContext(Dispatchers.Main) {
                             try {
-                                // Get the downloaded file from downloads directory
-                                val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                                val downloadedFile = JavaFile(downloadsDir, file.fileName)
-
-                                if (!downloadedFile.exists()) {
-                                    throw Exception("Downloaded file not found in downloads directory")
+                                // Rename downloaded file to temp file name
+                                val downloadedFile = JavaFile(tempFile.parentFile, file.fileName)
+                                if (downloadedFile.exists()) {
+                                    downloadedFile.renameTo(tempFile)
                                 }
-                                
-                                // Copy to cache directory
-                                val cacheDir = context.cacheDir
-                                val tempFile = JavaFile(cacheDir, file.fileName)
-                                downloadedFile.copyTo(tempFile, overwrite = true)
-                                
-                                // Delete the file from downloads directory since we have it in cache
-                                val deleted = downloadedFile.delete()
 
                                 // Create content URI using FileProvider
                                 val contentUri = FileProvider.getUriForFile(
@@ -202,14 +202,33 @@ class HomeViewModel(
                                 val chooserIntent = Intent.createChooser(intent, "Open with")
                                 chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                 context.startActivity(chooserIntent)
+
+                                // Schedule cleanup of old temp files
+                                CoroutineScope(Dispatchers.IO).launch {
+                                    try {
+                                        // Delete files older than 1 hour
+                                        val oneHourAgo = System.currentTimeMillis() - (60 * 60 * 1000)
+                                        cacheDir.listFiles()?.forEach { file ->
+                                            try {
+                                                val fileTimestamp = file.name.split("_")[0].toLong()
+                                                if (fileTimestamp < oneHourAgo) {
+                                                    file.delete()
+                                                }
+                                            } catch (e: Exception) {
+                                                // Ignore errors for individual files
+                                                Log.w(AiMouseSingleton.DEBUG_TAG, "Error deleting old temp file: ${file.name}", e)
+                                            }
+                                        }
+                                    } catch (e: Exception) {
+                                        Log.e(AiMouseSingleton.DEBUG_TAG, "Error cleaning up temp files", e)
+                                    }
+                                }
                             } catch (e: Exception) {
                                 Log.e(AiMouseSingleton.DEBUG_TAG, "Error in UI thread while opening media file", e)
                                 Toast.makeText(context, "Error opening media file: ${e.message}", Toast.LENGTH_LONG).show()
+                                // Clean up temp file if we failed to open it
+                                tempFile.delete()
                             }
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(context, "Failed to download media file", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } catch (e: Exception) {

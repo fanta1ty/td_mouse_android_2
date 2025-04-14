@@ -84,6 +84,10 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
     private var _transferProgress by mutableFloatStateOf(0f)
     override val transferProgress: Float
         get() = _transferProgress
+
+    var lastTransferStats: TransferStats? = null
+        private set
+
     //endregion
 
     init {
@@ -242,14 +246,92 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         }
     }
 
-    var lastTransferStats: TransferStats? = null
-        private set
+    private suspend fun ensureConnected() {
+        if (diskShare == null || !isConnected()) {
+            connectSMB()
+            // Wait for connection to be established
+            var attempts = 0
+            while (!isConnected() && attempts < 3) {
+                delay(1000)
+                attempts++
+            }
+            if (!isConnected()) {
+                throw IOException("Failed to reconnect to SMB server after $attempts attempts")
+            }
+        }
+    }
+
+    override suspend fun downloadFileSMB(fileName: String, targetDirectory: JavaFile?): TransferStats? {
+        _isTransferringFileSMB = true
+        _transferSpeed = "Transfer speed: %.2f MB/s".format(0.0)
+        _transferProgress = 0f
+        
+        var requestedFile: com.hierynomus.smbj.share.File? = null
+        var inputStream: InputStream? = null
+        var outputStream: OutputStream? = null
+
+        return try {
+            ensureConnected()
+
+            requestedFile = diskShare!!.openFile(
+                fileName,
+                setOf(AccessMask.GENERIC_READ),
+                null,
+                SMB2ShareAccess.ALL,
+                SMB2CreateDisposition.FILE_OPEN,
+                null
+            )
+
+            val fileSize = requestedFile.getFileInformation(FileStandardInformation::class.java).endOfFile
+            val targetDir = targetDirectory ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val localFile = JavaFile(targetDir, fileName)
+
+            // Create parent directories if they don't exist
+            localFile.parentFile?.mkdirs()
+
+            inputStream = requestedFile.inputStream
+            outputStream = FileOutputStream(localFile)
+            
+            val stats = transferFile(inputStream, outputStream, fileSize)
+            lastTransferStats = stats
+
+            withContext(Dispatchers.Main) { 
+                if (targetDirectory == null) { // Only show toast for downloads, not temp files
+                    toast(R.string.save_file_succeeded)
+                }
+            }
+
+            stats
+        } catch (e: Exception) {
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Error downloading file", e)
+            withContext(Dispatchers.Main) { 
+                if (targetDirectory == null) { // Only show toast for downloads, not temp files
+                    toast(R.string.save_file_error)
+                }
+            }
+            _smbState.value = SMBState.RECONNECT
+            null
+        } finally {
+            try {
+                inputStream?.close()
+                outputStream?.close()
+                requestedFile?.close()
+            } catch (e: Exception) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Error closing resources", e)
+            }
+            _isTransferringFileSMB = false
+        }
+    }
 
     override suspend fun uploadFileSMB(fileName: String): TransferStats? {
         _isTransferringFileSMB = true
         var remoteFile: com.hierynomus.smbj.share.File? = null
+        var inputStream: InputStream? = null
+        var outputStream: OutputStream? = null
 
         return try {
+            ensureConnected()
+
             diskShare?.let { share ->
                 val downloadDir = Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS
@@ -265,15 +347,11 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                     null
                 )
 
-                val stats = FileInputStream(localFile).use { inputStream ->
-                    remoteFile?.outputStream?.use { outputStream ->
-                        transferFile(inputStream, outputStream, localFile.length())
-                    }
-                }
-                lastTransferStats = stats
+                inputStream = FileInputStream(localFile)
+                outputStream = remoteFile?.outputStream
 
-                remoteFile?.close()
-                remoteFile = null
+                val stats = transferFile(inputStream!!, outputStream!!, localFile.length())
+                lastTransferStats = stats
 
                 withContext(Dispatchers.Main) {
                     toast(R.string.upload_file_succeeded)
@@ -282,56 +360,18 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                 stats
             }
         } catch (e: Exception) {
-            remoteFile?.close()
-            e.printStackTrace()
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Error uploading file", e)
             withContext(Dispatchers.Main) { toast(R.string.upload_file_error) }
             _smbState.value = SMBState.RECONNECT
             null
         } finally {
-            _isTransferringFileSMB = false
-        }
-    }
-
-    override suspend fun downloadFileSMB(fileName: String): TransferStats? {
-        _isTransferringFileSMB = true
-        _transferSpeed = "Transfer speed: %.2f MB/s".format(0.0)
-        _transferProgress = 0f
-
-        return try {
-            if (diskShare == null) throw RuntimeException("Disk share is null")
-
-            val requestedFile = diskShare!!.openFile(
-                fileName,
-                setOf(AccessMask.GENERIC_READ),
-                null,
-                SMB2ShareAccess.ALL,
-                SMB2CreateDisposition.FILE_OPEN,
-                null
-            )
-
-            val fileSize = requestedFile.getFileInformation(FileStandardInformation::class.java).endOfFile
-            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val localFile = JavaFile(downloadDir, fileName)
-
-            val inputStream = requestedFile.inputStream
-            val outputStream = FileOutputStream(localFile)
-            val stats = transferFile(inputStream, outputStream, fileSize)
-            lastTransferStats = stats
-
-            inputStream.close()
-            outputStream.close()
-            requestedFile.close()
-
-            withContext(Dispatchers.Main) { toast(R.string.save_file_succeeded) }
-
-            stats
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            withContext(Dispatchers.Main) { toast(R.string.save_file_error) }
-            _smbState.value = SMBState.RECONNECT
-            null
-        } finally {
+            try {
+                inputStream?.close()
+                outputStream?.close() 
+                remoteFile?.close()
+            } catch (e: Exception) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Error closing resources", e)
+            }
             _isTransferringFileSMB = false
         }
     }
@@ -341,6 +381,8 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         val openHandles = mutableListOf<AutoCloseable>()
 
         return try {
+            ensureConnected()
+
             if (diskShare == null) throw RuntimeException("Disk share is null")
 
             val localFolder = JavaFile(localFolderPath)
@@ -427,7 +469,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
     override suspend fun downloadFolderSMB(remoteFolderName: String): TransferStats? {
         _isTransferringFileSMB = true
         return try {
-            if (diskShare == null) throw RuntimeException("Disk share is null")
+            ensureConnected()
 
             val processedFolders = mutableSetOf<String>()
             val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
@@ -539,32 +581,43 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         var bytesRead: Int
         var totalBytesCopied = 0L
         var bytesSinceLastUpdate = 0L
-        val updateInterval = 1000L // milliseconds
+        val updateInterval = 500L // Reduced from 1000ms to 500ms for more frequent updates
         var lastUpdateTime = System.currentTimeMillis()
         val startTime = System.currentTimeMillis()
         var maxSpeedMBps = 0.0
+        
+        try {
+            while (inStream.read(buffer).also { bytesRead = it } != -1) {
+                outStream.write(buffer, 0, bytesRead)
+                totalBytesCopied += bytesRead
+                bytesSinceLastUpdate += bytesRead
 
-        while (inStream.read(buffer).also { bytesRead = it } != -1) {
-            outStream.write(buffer, 0, bytesRead)
-            totalBytesCopied += bytesRead
-            bytesSinceLastUpdate += bytesRead
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastUpdateTime >= updateInterval) {
+                    val elapsedSeconds = (currentTime - lastUpdateTime) / 1000.0
+                    val speedMBps = (bytesSinceLastUpdate.toDouble() / (1024 * 1024)) / elapsedSeconds
+                    if (speedMBps > maxSpeedMBps) {
+                        maxSpeedMBps = speedMBps
+                    }
 
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastUpdateTime >= updateInterval) {
-                val intervalMillis = currentTime - lastUpdateTime
-                val speedBytesPerSec = (bytesSinceLastUpdate * 1000) / intervalMillis
-                val speedMBps = speedBytesPerSec.toDouble() / (1024 * 1024)
-                _transferSpeed = "Transfer speed: %.2f MB/s".format(speedMBps)
-                _transferProgress = totalBytesCopied.toFloat() / fileSize
+                    _transferSpeed = "Transfer speed: %.2f MB/s".format(speedMBps)
+                    _transferProgress = (totalBytesCopied.toFloat() / fileSize)
 
-                if (speedMBps > maxSpeedMBps) maxSpeedMBps = speedMBps
+                    bytesSinceLastUpdate = 0
+                    lastUpdateTime = currentTime
+                }
 
-                bytesSinceLastUpdate = 0
-                lastUpdateTime = currentTime
+                // Add timeout check
+                if (currentTime - startTime > 30 * 60 * 1000) { // 30 minutes timeout
+                    throw IOException("Transfer timeout after 30 minutes")
+                }
             }
-        }
 
-        outStream.flush()
+            outStream.flush()
+        } catch (e: Exception) {
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Error during file transfer", e)
+            throw e
+        }
 
         val endTime = System.currentTimeMillis()
         val timeTakenSeconds = (endTime - startTime) / 1000.0
