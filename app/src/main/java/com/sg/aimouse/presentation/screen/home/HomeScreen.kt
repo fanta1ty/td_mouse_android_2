@@ -95,7 +95,7 @@ fun HomeScreen() {
         } else if (!isTransferring && isDownloading) {
             isDownloading = false
             refreshTrigger++
-            viewModel.retrieveLocalFiles()
+            viewModel.refreshCurrentLocalFolder()
         }
     }
 

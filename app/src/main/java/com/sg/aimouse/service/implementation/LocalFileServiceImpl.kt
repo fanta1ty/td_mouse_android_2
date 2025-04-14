@@ -24,14 +24,13 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    private var _currentFolderPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+
     override fun retrieveLocalFiles() {
         coroutineScope.launch {
-            val downloadDir = Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS
-            )
-
-            if (downloadDir.exists() && downloadDir.isDirectory) {
-                val localFiles = downloadDir.listFiles()?.map { file ->
+            val currentFolder = JavaFile(_currentFolderPath)
+            if (currentFolder.exists() && currentFolder.isDirectory) {
+                val localFiles = currentFolder.listFiles()?.map { file ->
                     val size = if (!file.isDirectory) file.length() else 0
                     File(
                         fileName = file.name,
@@ -95,6 +94,7 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
         coroutineScope.launch {
             val folder = JavaFile(folderPath)
             if (folder.exists() && folder.isDirectory) {
+                _currentFolderPath = folderPath
                 val files = folder.listFiles()?.map { file ->
                     File(
                         fileName = file.name,
@@ -109,9 +109,15 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
                     _localFiles.clear()
                     _localFiles.addAll(files)
                 }
+            } else {
+                withContext(Dispatchers.Main) {
+                    toast(R.string.folder_not_found)
+                }
             }
         }
     }
+
+    override fun getCurrentFolderPath(): String = _currentFolderPath
 
     private fun toast(@StringRes msgId: Int) {
         Toast.makeText(context, context.getString(msgId), Toast.LENGTH_SHORT).show()

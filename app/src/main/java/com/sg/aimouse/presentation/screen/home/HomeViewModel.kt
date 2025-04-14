@@ -53,6 +53,7 @@ class HomeViewModel(
         if (sambaService != null) {
             retrieveRemoteFilesSMB()
         }
+        currentLocalPath = getCurrentFolderPath()
     }
 
     fun openLocalFolder(folder: File) {
@@ -68,6 +69,10 @@ class HomeViewModel(
             currentLocalPath = parent.path
             openFolder(currentLocalPath)
         }
+    }
+
+    fun refreshCurrentLocalFolder() {
+        openFolder(currentLocalPath)
     }
 
     fun openRemoteFolder(folder: File) {

@@ -13,4 +13,6 @@ interface LocalFileService {
     fun deleteFile(filePath: String)
 
     fun openFolder(folderPath: String)
+
+    fun getCurrentFolderPath(): String
 }
