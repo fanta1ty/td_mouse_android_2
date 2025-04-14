@@ -27,6 +27,7 @@ import com.sg.aimouse.R
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.model.File
 import com.sg.aimouse.service.SambaService
+import com.sg.aimouse.service.LocalFileService
 import com.sg.aimouse.util.isNetworkAvailable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,7 +47,10 @@ enum class SMBState {
     RECONNECT, CONNECTING, CONNECTED, DISCONNECTED
 }
 
-class SambaServiceImpl(internal val context: Context) : SambaService {
+class SambaServiceImpl(
+    internal val context: Context,
+    private val localFileService: LocalFileService
+) : SambaService {
 
     //region Fields
     private var host: String = ""
@@ -288,7 +292,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
             )
 
             val fileSize = requestedFile.getFileInformation(FileStandardInformation::class.java).endOfFile
-            val targetDir = targetDirectory ?: Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val targetDir = targetDirectory ?: JavaFile(localFileService.getCurrentFolderPath())
             val localFile = JavaFile(targetDir, fileName)
 
             // Create parent directories if they don't exist

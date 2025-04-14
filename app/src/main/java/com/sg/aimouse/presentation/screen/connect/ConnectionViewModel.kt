@@ -4,13 +4,15 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import com.sg.aimouse.service.SambaService
 import com.sg.aimouse.service.implementation.SambaServiceImpl
+import com.sg.aimouse.service.implementation.LocalFileServiceImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class ConnectionViewModel(private val context: Context) : ViewModel() {
-    private val sambaService: SambaService = SambaServiceImpl(context)
+    private val localFileService = LocalFileServiceImpl(context)
+    private val sambaService: SambaService = SambaServiceImpl(context, localFileService)
     var lastErrorMessage: String = ""
 
     fun connectSMB(ipAddress: String, username: String, password: String, rootDir: String, callback: (Boolean) -> Unit) {

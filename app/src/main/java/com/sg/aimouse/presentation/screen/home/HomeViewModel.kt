@@ -2,21 +2,17 @@ package com.sg.aimouse.presentation.screen.home
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.sg.aimouse.model.File
-import com.sg.aimouse.service.BluetoothService
-import com.sg.aimouse.service.LocalFileService
 import com.sg.aimouse.service.SambaService
-import com.sg.aimouse.service.implementation.BluetoothServiceImplLocal
 import com.sg.aimouse.service.implementation.LocalFileServiceImpl
 import com.sg.aimouse.service.implementation.SambaServiceImpl
 import com.sg.aimouse.service.implementation.SambaServiceImpl.TransferStats
+import com.sg.aimouse.service.implementation.SMBState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File as JavaFile
@@ -30,10 +26,35 @@ import com.sg.aimouse.common.AiMouseSingleton
 class HomeViewModel(
     private val context: Context,
     private val sambaService: SambaService? = null
-) : ViewModel(),
-    BluetoothService by BluetoothServiceImplLocal(context),
-    LocalFileService by LocalFileServiceImpl(context),
-    SambaService by (sambaService ?: SambaServiceImpl(context)) {
+) : ViewModel() {
+    private val localFileService = LocalFileServiceImpl(context)
+    private val actualSambaService = sambaService ?: SambaServiceImpl(context, localFileService)
+
+    // Delegate to services
+    private val _localFileDelegate = localFileService
+    private val _sambaDelegate = actualSambaService
+
+    // Implement service interfaces through delegation
+    val localFiles get() = _localFileDelegate.localFiles
+    fun retrieveLocalFiles() = _localFileDelegate.retrieveLocalFiles()
+    fun getCurrentFolderPath() = _localFileDelegate.getCurrentFolderPath()
+    fun openFolder(folderPath: String) = _localFileDelegate.openFolder(folderPath)
+    fun saveFile(data: ByteArray, fileName: String) = _localFileDelegate.saveFile(data, fileName)
+    fun deleteFile(filePath: String) = _localFileDelegate.deleteFile(filePath)
+
+    // Samba delegation
+    val remoteFiles get() = _sambaDelegate.remoteFiles
+    val isTransferringFileSMB get() = _sambaDelegate.isTransferringFileSMB
+    val transferSpeed get() = _sambaDelegate.transferSpeed
+    val transferProgress get() = _sambaDelegate.transferProgress
+    fun closeSMB(isRelease: Boolean) = _sambaDelegate.closeSMB(isRelease)
+    fun retrieveRemoteFilesSMB(folderName: String = "") = _sambaDelegate.retrieveRemoteFilesSMB(folderName)
+    suspend fun uploadFileSMB(fileName: String) = _sambaDelegate.uploadFileSMB(fileName)
+    suspend fun downloadFileSMB(fileName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFileSMB(fileName, targetDirectory)
+    suspend fun uploadFolderSMB(folderName: String) = _sambaDelegate.uploadFolderSMB(folderName)
+    suspend fun downloadFolderSMB(folderName: String) = _sambaDelegate.downloadFolderSMB(folderName)
+    fun updateSMBState(state: SMBState) = _sambaDelegate.updateSMBState(state)
+    fun deleteFileSMB(fileName: String) = _sambaDelegate.deleteFileSMB(fileName)
 
     var lastTransferStats: TransferStats? = null
         private set
@@ -129,7 +150,8 @@ class HomeViewModel(
             val stats = if (file.isDirectory) {
                 downloadFolderSMB(file.fileName)
             } else {
-                downloadFileSMB(file.fileName)
+                val currentDir = JavaFile(currentLocalPath)
+                downloadFileSMB(file.fileName, currentDir)
             }
             withContext(Dispatchers.Main) {
                 lastTransferStats = stats

@@ -50,16 +50,14 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
     }
 
     override fun saveFile(data: ByteArray, fileName: String) {
-        val downloadDir = Environment.getExternalStoragePublicDirectory(
-            Environment.DIRECTORY_DOWNLOADS
-        )
+        val currentDir = JavaFile(_currentFolderPath)
 
-        if (downloadDir == null) {
+        if (!currentDir.exists() || !currentDir.isDirectory) {
             toast(R.string.save_file_error)
             return
         }
 
-        downloadDir.let { dir ->
+        currentDir.let { dir ->
             val file = JavaFile(dir, fileName)
 
             try {
