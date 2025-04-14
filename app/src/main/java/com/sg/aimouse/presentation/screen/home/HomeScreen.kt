@@ -283,9 +283,9 @@ fun HomeScreen() {
                         )
                     }
                     // Back button
-                    val downloadsPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+                    val rootPath = Environment.getExternalStorageDirectory().path
                     val currentPath = viewModel.currentLocalPath
-                    if (currentPath != downloadsPath) {
+                    if (currentPath != rootPath) {
                         IconButton(
                             modifier = Modifier
                                 .fillMaxWidth()

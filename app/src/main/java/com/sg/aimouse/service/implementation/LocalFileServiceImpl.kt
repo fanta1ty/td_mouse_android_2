@@ -24,7 +24,7 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
-    private var _currentFolderPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+    private var _currentFolderPath = Environment.getExternalStorageDirectory().path
 
     override fun retrieveLocalFiles() {
         coroutineScope.launch {

@@ -41,7 +41,7 @@ class HomeViewModel(
     var lastTransferredFileName: String? = null
 
     var currentLocalPath by mutableStateOf(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path
+        Environment.getExternalStorageDirectory().path
     )
         private set
 
