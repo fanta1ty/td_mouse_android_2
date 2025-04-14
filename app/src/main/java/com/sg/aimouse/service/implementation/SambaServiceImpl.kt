@@ -94,7 +94,7 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         coroutineScope.launch(Dispatchers.Main) {
             _smbState.collect { state ->
                 when (state) {
-                    SMBState.CONNECTED -> retrieveRemoteFilesSMB()
+                    SMBState.CONNECTED -> Unit
                     SMBState.CONNECTING -> Unit
                     SMBState.RECONNECT -> reconnect()
                     SMBState.DISCONNECTED -> closeSMB()
@@ -204,8 +204,8 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
         coroutineScope.launch {
             try {
                 _remoteFiles.clear()
-                if (diskShare == null) throw RuntimeException()
-
+                ensureConnected() // First ensure we're connected
+                
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
                         folderName,
@@ -234,29 +234,34 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
 
                     _remoteFiles.addAll(files)
                 }
-            } catch (e: IOException) {
+            } catch (e: Exception) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to get remote files", e)
                 withContext(Dispatchers.Main) { toast(R.string.retrieve_remote_file_error) }
-                e.printStackTrace()
-                _smbState.value = SMBState.RECONNECT
-            } catch (e: RuntimeException) {
-                withContext(Dispatchers.Main) { toast(R.string.retrieve_remote_file_error) }
-                e.printStackTrace()
-                _smbState.value = SMBState.RECONNECT
+                // Only reconnect if it's a connection issue
+                if (e is IOException || diskShare == null || !isConnected()) {
+                    _smbState.value = SMBState.RECONNECT
+                }
             }
         }
     }
 
     private suspend fun ensureConnected() {
         if (diskShare == null || !isConnected()) {
-            connectSMB()
-            // Wait for connection to be established
-            var attempts = 0
-            while (!isConnected() && attempts < 3) {
-                delay(1000)
-                attempts++
-            }
-            if (!isConnected()) {
-                throw IOException("Failed to reconnect to SMB server after $attempts attempts")
+            try {
+                connectSMB()
+                // Wait for connection to be established
+                var attempts = 0
+                while (!isConnected() && attempts < 3) {
+                    delay(1000)
+                    attempts++
+                }
+                if (!isConnected()) {
+                    throw IOException("Failed to reconnect to SMB server after $attempts attempts")
+                }
+            } catch (e: Exception) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Connection failed", e)
+                // Don't change state here, just propagate the error
+                throw e
             }
         }
     }
@@ -298,18 +303,20 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
             withContext(Dispatchers.Main) { 
                 if (targetDirectory == null) { // Only show toast for downloads, not temp files
                     toast(R.string.save_file_succeeded)
+                    retrieveRemoteFilesSMB() // Only refresh list for actual downloads, not previews
                 }
             }
 
             stats
         } catch (e: Exception) {
-            Log.e(AiMouseSingleton.DEBUG_TAG, "Error downloading file", e)
-            withContext(Dispatchers.Main) { 
-                if (targetDirectory == null) { // Only show toast for downloads, not temp files
-                    toast(R.string.save_file_error)
-                }
+            Log.e(AiMouseSingleton.DEBUG_TAG, "Error downloading media file", e)
+            withContext(Dispatchers.Main) {
+                toast(R.string.save_file_error)
             }
-            _smbState.value = SMBState.RECONNECT
+            // Don't trigger reconnect for preview errors
+            if (targetDirectory == null) {
+                _smbState.value = SMBState.RECONNECT
+            }
             null
         } finally {
             try {
@@ -500,7 +507,11 @@ class SambaServiceImpl(internal val context: Context) : SambaService {
                     val fileName = fileInfo.fileName
                     if (fileName == "." || fileName == "..") return@forEach
 
-                    val isDir = EnumWithValue.EnumUtils.isSet(fileInfo.fileAttributes, FileAttributes.FILE_ATTRIBUTE_DIRECTORY)
+                    val isDir = EnumWithValue.EnumUtils.isSet(
+                        fileInfo.fileAttributes,
+                        FileAttributes.FILE_ATTRIBUTE_DIRECTORY
+                    )
+
                     val remoteFilePath = if (folderPath.isEmpty()) fileName else "$folderPath${JavaFile.separator}$fileName"
 
                     if (isDir) {

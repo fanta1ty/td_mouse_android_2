@@ -72,13 +72,22 @@ class HomeViewModel(
 
     fun openRemoteFolder(folder: File) {
         if (folder.isDirectory) {
-            val newPath = if (currentRemotePath.isEmpty()) {
-                folder.fileName
-            } else {
-                "$currentRemotePath/${folder.fileName}"
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    val newPath = if (currentRemotePath.isEmpty()) {
+                        folder.fileName
+                    } else {
+                        "$currentRemotePath/${folder.fileName}"
+                    }
+                    currentRemotePath = newPath
+                    retrieveRemoteFilesSMB(newPath)
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open remote folder", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Failed to open folder: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
-            currentRemotePath = newPath
-            retrieveRemoteFilesSMB(newPath)
         }
     }
 
