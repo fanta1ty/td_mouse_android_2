@@ -71,6 +71,8 @@ class SambaServiceImpl(
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    var currentRemotePath: String = ""
+
     private val _smbState = MutableStateFlow(SMBState.DISCONNECTED)
 
     private val _remoteFiles = mutableStateListOf<File>()
@@ -126,7 +128,7 @@ class SambaServiceImpl(
                     }
                     withContext(Dispatchers.Main) {
                         toast(R.string.delete_file_succeeded)
-                        retrieveRemoteFilesSMB()
+                        retrieveRemoteFilesSMB(currentRemotePath)
                     }
                 } ?: throw RuntimeException("Disk share is null")
             } catch (e: Exception) {

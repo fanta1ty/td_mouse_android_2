@@ -106,6 +106,7 @@ class HomeViewModel(
                         "$currentRemotePath/${folder.fileName}"
                     }
                     currentRemotePath = newPath
+                    (actualSambaService as? SambaServiceImpl)?.currentRemotePath = newPath
                     retrieveRemoteFilesSMB(newPath)
                 } catch (e: Exception) {
                     Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to open remote folder", e)
@@ -166,7 +167,9 @@ class HomeViewModel(
     fun deleteFile(file: File, isRemote: Boolean) {
         CoroutineScope(Dispatchers.Main).launch {
             if (isRemote) {
-                deleteFileSMB(file.fileName)
+                val remotePath = if (currentRemotePath.isEmpty()) file.fileName
+                               else "$currentRemotePath/${file.fileName}"
+                deleteFileSMB(remotePath)
             } else {
                 deleteFile(file.path)
             }
