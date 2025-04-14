@@ -334,7 +334,7 @@ class SambaServiceImpl(
         }
     }
 
-    override suspend fun uploadFileSMB(fileName: String): TransferStats? {
+    override suspend fun uploadFileSMB(fileName: String, remotePath: String): TransferStats? {
         _isTransferringFileSMB = true
         var remoteFile: com.hierynomus.smbj.share.File? = null
         var inputStream: InputStream? = null
@@ -349,8 +349,12 @@ class SambaServiceImpl(
                 )
                 val localFile = JavaFile(downloadDir, fileName)
 
+                // Combine remotePath with fileName
+                val remoteFilePath = if (remotePath.isEmpty()) fileName
+                                   else "$remotePath/$fileName"
+
                 remoteFile = share.openFile(
-                    fileName,
+                    remoteFilePath,
                     setOf(AccessMask.GENERIC_WRITE),
                     null,
                     SMB2ShareAccess.ALL,
@@ -516,7 +520,7 @@ class SambaServiceImpl(
                         FileAttributes.FILE_ATTRIBUTE_DIRECTORY
                     )
 
-                    val remoteFilePath = if (folderPath.isEmpty()) fileName else "$folderPath${JavaFile.separator}$fileName"
+                    val remoteFilePath = if (folderPath.isEmpty()) fileName else "$folderPath/$fileName"
 
                     if (isDir) {
                         downloadFolderRecursively(remoteFilePath, localBaseDir)

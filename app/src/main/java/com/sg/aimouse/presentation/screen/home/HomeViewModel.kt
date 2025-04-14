@@ -49,7 +49,7 @@ class HomeViewModel(
     val transferProgress get() = _sambaDelegate.transferProgress
     fun closeSMB(isRelease: Boolean) = _sambaDelegate.closeSMB(isRelease)
     fun retrieveRemoteFilesSMB(folderName: String = "") = _sambaDelegate.retrieveRemoteFilesSMB(folderName)
-    suspend fun uploadFileSMB(fileName: String) = _sambaDelegate.uploadFileSMB(fileName)
+    suspend fun uploadFileSMB(fileName: String, remotePath: String) = _sambaDelegate.uploadFileSMB(fileName, remotePath)
     suspend fun downloadFileSMB(fileName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFileSMB(fileName, targetDirectory)
     suspend fun uploadFolderSMB(folderName: String) = _sambaDelegate.uploadFolderSMB(folderName)
     suspend fun downloadFolderSMB(folderName: String) = _sambaDelegate.downloadFolderSMB(folderName)
@@ -133,7 +133,7 @@ class HomeViewModel(
             val stats = if (file.isDirectory) {
                 uploadFolderSMB(file.path)
             } else {
-                uploadFileSMB(file.fileName)
+                uploadFileSMB(file.fileName, currentRemotePath)
             }
             withContext(Dispatchers.Main) {
                 lastTransferStats = stats
