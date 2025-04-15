@@ -71,7 +71,9 @@ class SambaServiceImpl(
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
+    private var _currentRemotePath = ""
     var currentRemotePath: String = ""
+        get() = _currentRemotePath
 
     private val _smbState = MutableStateFlow(SMBState.DISCONNECTED)
 
@@ -120,21 +122,24 @@ class SambaServiceImpl(
     override fun deleteFileSMB(fileName: String) {
         coroutineScope.launch {
             try {
-                diskShare?.let { share ->
-                    if (share.fileExists(fileName)) {
-                        share.rm(fileName)
-                    } else if (share.folderExists(fileName)) {
-                        share.rmdir(fileName, true) // Xóa đệ quy
+                ensureConnected()
+                
+                diskShare!!.apply {
+                    // For files
+                    if (fileExists(fileName)) {
+                        rm(fileName)
+                    } 
+                    // For folders
+                    else if (folderExists(fileName)) {
+                        rmdir(fileName, true)
                     }
-                    withContext(Dispatchers.Main) {
-                        toast(R.string.delete_file_succeeded)
-                        retrieveRemoteFilesSMB(currentRemotePath)
-                    }
-                } ?: throw RuntimeException("Disk share is null")
+                    
+                    // Refresh files in current path
+                    retrieveRemoteFilesSMB(_currentRemotePath)
+                }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to delete remote file", e)
                 withContext(Dispatchers.Main) { toast(R.string.delete_file_error) }
-                _smbState.value = SMBState.RECONNECT
             }
         }
     }
@@ -210,7 +215,9 @@ class SambaServiceImpl(
         coroutineScope.launch {
             try {
                 _remoteFiles.clear()
-                ensureConnected() // First ensure we're connected
+                ensureConnected()
+                
+                _currentRemotePath = folderName
                 
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
@@ -506,7 +513,7 @@ class SambaServiceImpl(
                     SMB2ShareAccess.ALL,
                     SMB2CreateDisposition.FILE_OPEN,
                     null
-                ) ?: throw RuntimeException("Cannot open directory: $folderPath")
+                ) ?: throw RuntimeException()
 
                 val localFolder = JavaFile(localBaseDir, folderPath)
                 localFolder.mkdirs()

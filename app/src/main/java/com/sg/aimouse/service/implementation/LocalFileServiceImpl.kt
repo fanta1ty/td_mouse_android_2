@@ -71,17 +71,16 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
     override fun deleteFile(filePath: String) {
         coroutineScope.launch {
-            val file = JavaFile(filePath)
-            val success = if (file.isDirectory) {
-                file.deleteRecursively()
-            } else {
-                file.delete()
-            }
-            withContext(Dispatchers.Main) {
-                if (success) {
-                    toast(R.string.delete_file_succeeded)
-                    retrieveLocalFiles()
-                } else {
+            try {
+                val file = JavaFile(filePath)
+                if (file.exists()) {
+                    file.delete()
+                    withContext(Dispatchers.Main) {
+                        retrieveLocalFiles()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
                     toast(R.string.delete_file_error)
                 }
             }
