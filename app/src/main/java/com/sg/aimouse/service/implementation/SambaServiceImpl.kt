@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
+import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -346,7 +347,7 @@ class SambaServiceImpl(
         }
     }
 
-    override suspend fun uploadFileSMB(fileName: String, remotePath: String): TransferStats? {
+    override suspend fun uploadFileSMB(filePath: String, remotePath: String): TransferStats? {
         _isTransferringFileSMB = true
         var remoteFile: com.hierynomus.smbj.share.File? = null
         var inputStream: InputStream? = null
@@ -356,12 +357,11 @@ class SambaServiceImpl(
             ensureConnected()
 
             diskShare?.let { share ->
-                val downloadDir = Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS
-                )
-                val localFile = JavaFile(downloadDir, fileName)
+                val localFile = JavaFile(filePath)
+                if (!localFile.exists()) throw FileNotFoundException("File not found: ${localFile.path}")
 
-                // Combine remotePath with fileName
+                // Get just the filename from path
+                val fileName = localFile.name
                 val remoteFilePath = if (remotePath.isEmpty()) fileName
                                    else "$remotePath/$fileName"
 

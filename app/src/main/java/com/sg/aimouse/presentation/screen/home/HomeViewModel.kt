@@ -134,7 +134,7 @@ class HomeViewModel(
             val stats = if (file.isDirectory) {
                 uploadFolderSMB(file.path)
             } else {
-                uploadFileSMB(file.fileName, currentRemotePath)
+                uploadFileSMB(file.path, currentRemotePath)
             }
             withContext(Dispatchers.Main) {
                 lastTransferStats = stats
