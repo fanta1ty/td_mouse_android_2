@@ -16,7 +16,7 @@
     <string name="send_file_transferjet_desc">This file size is more than 2Mb. Do you want send this file via TransferJet?</string>
 
     <string name="td_mouse_connection_error">Failed to connect to TD Mouse</string>
-    <string name="save_file_succeeded">File saved to Download folder</string>
+    <string name="save_file_succeeded">File saved successfully!</string>
     <string name="save_file_error">Failed to save file</string>
     <string name="upload_file_succeeded">File uploaded to TD Mouse</string>
     <string name="upload_file_error">Failed to upload file</string>

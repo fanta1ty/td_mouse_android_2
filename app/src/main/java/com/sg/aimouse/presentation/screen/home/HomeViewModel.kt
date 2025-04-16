@@ -52,7 +52,7 @@ class HomeViewModel(
     suspend fun uploadFileSMB(fileName: String, remotePath: String) = _sambaDelegate.uploadFileSMB(fileName, remotePath)
     suspend fun downloadFileSMB(fileName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFileSMB(fileName, targetDirectory)
     suspend fun uploadFolderSMB(folderName: String) = _sambaDelegate.uploadFolderSMB(folderName)
-    suspend fun downloadFolderSMB(folderName: String) = _sambaDelegate.downloadFolderSMB(folderName)
+    suspend fun downloadFolderSMB(folderName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFolderSMB(folderName, targetDirectory)
     fun updateSMBState(state: SMBState) = _sambaDelegate.updateSMBState(state)
     fun deleteFileSMB(fileName: String) = _sambaDelegate.deleteFileSMB(fileName)
 
@@ -149,7 +149,8 @@ class HomeViewModel(
     fun downloadFileOrFolder(file: File) {
         CoroutineScope(Dispatchers.IO).launch {
             val stats = if (file.isDirectory) {
-                downloadFolderSMB(file.fileName)
+                val currentDir = JavaFile(currentLocalPath)
+                downloadFolderSMB(file.fileName, currentDir)
             } else {
                 val currentDir = JavaFile(currentLocalPath)
                 downloadFileSMB(file.fileName, currentDir)

@@ -493,13 +493,13 @@ class SambaServiceImpl(
         }
     }
 
-    override suspend fun downloadFolderSMB(remoteFolderName: String): TransferStats? {
+    override suspend fun downloadFolderSMB(remoteFolderName: String, targetDirectory: JavaFile?): TransferStats? {
         _isTransferringFileSMB = true
         return try {
             ensureConnected()
 
             val processedFolders = mutableSetOf<String>()
-            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            val downloadDir = targetDirectory ?: JavaFile(localFileService.getCurrentFolderPath())
 
             val startTime = System.currentTimeMillis()
             var totalBytesCopied = 0L
