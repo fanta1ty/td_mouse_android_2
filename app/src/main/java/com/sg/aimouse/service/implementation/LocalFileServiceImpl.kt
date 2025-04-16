@@ -74,9 +74,16 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
             try {
                 val file = JavaFile(filePath)
                 if (file.exists()) {
-                    file.delete()
-                    withContext(Dispatchers.Main) {
-                        retrieveLocalFiles()
+                    val success = if (file.isDirectory) {
+                        file.deleteRecursively()
+                    } else {
+                        file.delete()
+                    }
+                    if (success) {
+                        withContext(Dispatchers.Main) {
+                            toast(R.string.delete_file_succeeded)
+                            retrieveLocalFiles()
+                        }
                     }
                 }
             } catch (e: Exception) {

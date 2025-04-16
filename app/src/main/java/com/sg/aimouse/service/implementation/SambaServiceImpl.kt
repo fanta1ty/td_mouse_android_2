@@ -135,7 +135,10 @@ class SambaServiceImpl(
                     }
                     
                     // Refresh files in current path
-                    retrieveRemoteFilesSMB(_currentRemotePath)
+                    withContext(Dispatchers.Main) {
+                        toast(R.string.delete_file_succeeded)
+                        retrieveRemoteFilesSMB(_currentRemotePath)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to delete remote file", e)
@@ -265,7 +268,7 @@ class SambaServiceImpl(
                 // Wait for connection to be established
                 var attempts = 0
                 while (!isConnected() && attempts < 3) {
-                    delay(1000)
+                    delay(500)
                     attempts++
                 }
                 if (!isConnected()) {
