@@ -150,10 +150,14 @@ class HomeViewModel(
         CoroutineScope(Dispatchers.IO).launch {
             val stats = if (file.isDirectory) {
                 val currentDir = JavaFile(currentLocalPath)
-                downloadFolderSMB(file.fileName, currentDir)
+                val remotePath = if (currentRemotePath.isEmpty()) file.fileName
+                               else "$currentRemotePath/${file.fileName}"
+                downloadFolderSMB(remotePath, currentDir)
             } else {
                 val currentDir = JavaFile(currentLocalPath)
-                downloadFileSMB(file.fileName, currentDir)
+                val remotePath = if (currentRemotePath.isEmpty()) file.fileName
+                               else "$currentRemotePath/${file.fileName}"
+                downloadFileSMB(remotePath, currentDir)
             }
             withContext(Dispatchers.Main) {
                 lastTransferStats = stats

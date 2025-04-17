@@ -306,7 +306,10 @@ class SambaServiceImpl(
 
             val fileSize = requestedFile.getFileInformation(FileStandardInformation::class.java).endOfFile
             val targetDir = targetDirectory ?: JavaFile(localFileService.getCurrentFolderPath())
-            val localFile = JavaFile(targetDir, fileName)
+            
+            // Extract just the file name from the path
+            val justFileName = fileName.split("/").last()
+            val localFile = JavaFile(targetDir, justFileName)
 
             // Create parent directories if they don't exist
             localFile.parentFile?.mkdirs()
@@ -500,12 +503,15 @@ class SambaServiceImpl(
 
             val processedFolders = mutableSetOf<String>()
             val downloadDir = targetDirectory ?: JavaFile(localFileService.getCurrentFolderPath())
-
+            
+            // Extract the target folder name from the path
+            val targetFolderName = remoteFolderName.split("/").last()
+            
             val startTime = System.currentTimeMillis()
             var totalBytesCopied = 0L
             var maxSpeedMBps = 0.0
 
-            suspend fun downloadFolderRecursively(folderPath: String, localBaseDir: JavaFile) {
+            suspend fun downloadFolderRecursively(folderPath: String, localBaseDir: JavaFile, isRootFolder: Boolean) {
                 if (processedFolders.contains(folderPath)) return
                 processedFolders.add(folderPath)
 
@@ -518,7 +524,15 @@ class SambaServiceImpl(
                     null
                 ) ?: throw RuntimeException()
 
-                val localFolder = JavaFile(localBaseDir, folderPath)
+                // For the root folder, create a folder with just the target name
+                // For subfolders, create the relative path structure
+                val localFolder = if (isRootFolder) {
+                    JavaFile(localBaseDir, targetFolderName)
+                } else {
+                    // Get the relative path from the root folder
+                    val relativePath = folderPath.substring(remoteFolderName.length + 1) // +1 for the slash
+                    JavaFile(JavaFile(localBaseDir, targetFolderName), relativePath)
+                }
                 localFolder.mkdirs()
 
                 val fileList = remoteFolder.list()
@@ -535,7 +549,7 @@ class SambaServiceImpl(
                     val remoteFilePath = if (folderPath.isEmpty()) fileName else "$folderPath/$fileName"
 
                     if (isDir) {
-                        downloadFolderRecursively(remoteFilePath, localBaseDir)
+                        downloadFolderRecursively(remoteFilePath, localBaseDir, false)
                     } else {
                         val localFile = JavaFile(localFolder, fileName)
                         val remoteFile = diskShare!!.openFile(
@@ -563,7 +577,7 @@ class SambaServiceImpl(
                 remoteFolder.close()
             }
 
-            downloadFolderRecursively(remoteFolderName, downloadDir)
+            downloadFolderRecursively(remoteFolderName, downloadDir, true)
 
             val endTime = System.currentTimeMillis()
             val timeTakenSeconds = (endTime - startTime) / 1000.0
