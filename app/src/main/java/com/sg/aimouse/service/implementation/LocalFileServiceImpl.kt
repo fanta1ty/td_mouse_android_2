@@ -47,7 +47,10 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
                 withContext(Dispatchers.Main) {
                     _localFiles.clear()
-                    _localFiles.addAll(localFiles)
+                    _localFiles.addAll(localFiles.filter { file ->
+                        val name = file.fileName
+                        name != "." && name != ".." && !name.startsWith(".")
+                    })
                 }
             }
         }
@@ -118,7 +121,10 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
 
                 withContext(Dispatchers.Main) {
                     _localFiles.clear()
-                    _localFiles.addAll(files)
+                    _localFiles.addAll(files.filter { file ->
+                        val name = file.fileName
+                        name != "." && name != ".." && !name.startsWith(".")
+                    })
                 }
             } else {
                 withContext(Dispatchers.Main) {

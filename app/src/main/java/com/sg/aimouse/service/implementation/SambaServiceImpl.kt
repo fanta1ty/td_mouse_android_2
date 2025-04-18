@@ -255,7 +255,8 @@ class SambaServiceImpl(
                         .thenByDescending { it.createdTime })
 
                     _remoteFiles.addAll(files.filter { file ->
-                        file.fileName != "." && file.fileName != ".."
+                        val name = file.fileName
+                        name != "." && name != ".." && !name.startsWith(".")
                     })
                 }
             } catch (e: Exception) {
