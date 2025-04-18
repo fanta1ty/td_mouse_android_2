@@ -226,7 +226,6 @@ class SambaServiceImpl(
                 ensureConnected()
                 
                 _currentRemotePath = folderName
-                Log.d("debug", "Current remote path retrieveRemoteFilesSMB: $_currentRemotePath")
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
                         folderName,

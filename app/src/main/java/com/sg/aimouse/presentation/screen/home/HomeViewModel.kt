@@ -210,7 +210,9 @@ class HomeViewModel(
                     val tempFile = JavaFile(cacheDir, tempFileName)
                     
                     // Download directly to cache
-                    val stats = downloadFileSMB(file.fileName, tempFile.parentFile)
+                    val remotePath = if (currentRemotePath.isEmpty()) file.fileName
+                        else "$currentRemotePath/${file.fileName}"
+                    val stats = downloadFileSMB(remotePath, tempFile.parentFile)
                     if (stats != null) {
                         withContext(Dispatchers.Main) {
                             try {
