@@ -250,9 +250,12 @@ class SambaServiceImpl(
                             isDirectory = isDir,
                             createdTime = createdTime
                         )
-                    }.sortedByDescending { it.createdTime }
+                    }.sortedWith(compareByDescending<File> { it.isDirectory }
+                        .thenByDescending { it.createdTime })
 
-                    _remoteFiles.addAll(files)
+                    _remoteFiles.addAll(files.filter { file ->
+                        file.fileName != "." && file.fileName != ".."
+                    })
                 }
             } catch (e: Exception) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to get remote files", e)

@@ -2,6 +2,7 @@ package com.sg.aimouse.service.implementation
 
 import android.content.Context
 import android.os.Environment
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.compose.runtime.mutableStateListOf
@@ -39,7 +40,10 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
                         isDirectory = file.isDirectory,
                         createdTime = file.lastModified()
                     )
-                }?.sortedByDescending { it.createdTime } ?: emptyList()
+                }?.sortedWith(
+                compareByDescending<File> { it.isDirectory }
+                    .thenByDescending { it.createdTime }
+                ) ?: emptyList()
 
                 withContext(Dispatchers.Main) {
                     _localFiles.clear()
@@ -107,7 +111,10 @@ class LocalFileServiceImpl(private val context: Context) : LocalFileService {
                         isDirectory = file.isDirectory,
                         createdTime = file.lastModified()
                     )
-                }?.sortedByDescending { it.createdTime } ?: emptyList()
+                }?.sortedWith(
+                    compareByDescending<File> { it.isDirectory }
+                        .thenByDescending { it.createdTime }
+                ) ?: emptyList()
 
                 withContext(Dispatchers.Main) {
                     _localFiles.clear()
