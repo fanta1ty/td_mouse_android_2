@@ -5,6 +5,7 @@ package com.sg.aimouse.presentation.screen.home
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -91,7 +92,7 @@ fun HomeScreen() {
         if (!isTransferring && isUploading) {
             isUploading = false
             refreshTrigger++
-            viewModel.retrieveRemoteFilesSMB()
+            viewModel.retrieveRemoteFilesSMB(viewModel.currentRemotePath)
         } else if (!isTransferring && isDownloading) {
             isDownloading = false
             refreshTrigger++
@@ -101,7 +102,7 @@ fun HomeScreen() {
 
     LaunchedEffect(isRefreshingRemote) {
         if (isRefreshingRemote) {
-            viewModel.retrieveRemoteFilesSMB()
+            viewModel.retrieveRemoteFilesSMB(viewModel.currentRemotePath)
             isRefreshingRemote = false
         }
     }

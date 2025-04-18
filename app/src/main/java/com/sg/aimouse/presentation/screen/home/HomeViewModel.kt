@@ -152,8 +152,6 @@ class HomeViewModel(
                 if (lastTransferStats != null) {
                     showTransferDialog.value = true
                 }
-                // Force refresh the remote files list after upload
-                refreshRemoteFiles()
             }
         }
     }
