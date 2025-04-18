@@ -225,10 +225,11 @@ class SambaServiceImpl(
                 _remoteFiles.clear()
                 ensureConnected()
                 
+                val normalizedPath = if (folderName.isEmpty()) "/" else folderName
                 _currentRemotePath = folderName
                 diskShare!!.apply {
                     val remoteFolder = openDirectory(
-                        folderName,
+                        normalizedPath,
                         setOf(AccessMask.GENERIC_READ),
                         null,
                         SMB2ShareAccess.ALL,

@@ -141,10 +141,11 @@ class HomeViewModel(
 
     fun uploadFileOrFolder(file: File) {
         CoroutineScope(Dispatchers.IO).launch {
+            val targetPath = if (currentRemotePath.isEmpty()) "/" else currentRemotePath
             val stats = if (file.isDirectory) {
-                uploadFolderSMB(file.path, currentRemotePath)
+                uploadFolderSMB(file.path, targetPath)
             } else {
-                uploadFileSMB(file.path, currentRemotePath)
+                uploadFileSMB(file.path, targetPath)
             }
             withContext(Dispatchers.Main) {
                 lastTransferStats = stats
