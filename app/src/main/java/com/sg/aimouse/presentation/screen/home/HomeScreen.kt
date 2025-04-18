@@ -2,10 +2,7 @@
 
 package com.sg.aimouse.presentation.screen.home
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Environment
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
@@ -29,7 +26,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.zIndex
-import androidx.core.content.FileProvider
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -43,7 +39,6 @@ import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
 import com.sg.aimouse.service.implementation.SMBState
 import com.sg.aimouse.util.viewModelFactory
-import java.io.File as JavaFile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -369,55 +364,7 @@ fun HomeScreen() {
                                         if (file.isDirectory) {
                                             viewModel.openLocalFolder(file)
                                         } else {
-                                            val extension = file.fileName.substringAfterLast(".", "").lowercase()
-                                            val javaFile = JavaFile(file.path)
-                                            val uri = FileProvider.getUriForFile(
-                                                activity,
-                                                "${activity.packageName}.fileprovider",
-                                                javaFile
-                                            )
-                                            when (extension) {
-                                                "mp4", "avi", "mp3", "wav" -> {
-                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                        setDataAndType(uri, when (extension) {
-                                                            "mp4", "avi" -> "video/*"
-                                                            else -> "audio/*"
-                                                        })
-                                                        setPackage("org.videolan.vlc")
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    }
-                                                    try {
-                                                        activity.startActivity(intent)
-                                                    } catch (e: Exception) {
-                                                        val fallbackIntent = Intent(Intent.ACTION_VIEW).apply {
-                                                            setDataAndType(uri, when (extension) {
-                                                                "mp4", "avi" -> "video/*"
-                                                                else -> "audio/*"
-                                                            })
-                                                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                        }
-                                                        activity.startActivity(fallbackIntent)
-                                                    }
-                                                }
-                                                "jpg", "jpeg", "png" -> {
-                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                        setDataAndType(uri, "image/*")
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    }
-                                                    activity.startActivity(intent)
-                                                }
-                                                "txt" -> {
-                                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                        setDataAndType(uri, "text/plain")
-                                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                                    }
-                                                    activity.startActivity(intent)
-                                                }
-                                            }
+                                            viewModel.openLocalFile(file)
                                         }
                                     },
                                     onSwipeToDelete = {

@@ -1,5 +1,7 @@
 package com.sg.aimouse.presentation.screen.home
 
+import java.net.URLConnection
+
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.mutableStateOf
@@ -126,16 +128,6 @@ class HomeViewModel(
         } else {
             currentRemotePath = ""
             retrieveRemoteFilesSMB("")
-        }
-    }
-
-    fun refreshRemoteFiles() {
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                retrieveRemoteFilesSMB(currentRemotePath)
-            } catch (e: Exception) {
-                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to refresh remote files", e)
-            }
         }
     }
 
@@ -297,6 +289,39 @@ class HomeViewModel(
             }
         } else if (file.isDirectory) {
             openRemoteFolder(file)
+        }
+    }
+
+    fun openLocalFile(file: File) {
+        if (!file.isDirectory && isMediaFile(file.fileName)) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    withContext(Dispatchers.Main) {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW)
+                            val javaFile = java.io.File(file.path)
+                            val uri = FileProvider.getUriForFile(
+                                context,
+                                "${context.packageName}.provider",
+                                javaFile
+                            )
+                            intent.setDataAndType(uri, URLConnection.guessContentTypeFromName(file.fileName))
+                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Log.e(AiMouseSingleton.DEBUG_TAG, "Error opening local media file", e)
+                            Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(AiMouseSingleton.DEBUG_TAG, "Error in IO thread while opening local media file", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        } else if (file.isDirectory) {
+            openLocalFolder(file)
         }
     }
 
