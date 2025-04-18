@@ -218,7 +218,7 @@ class HomeViewModel(
                                 // Create content URI using FileProvider
                                 val contentUri = FileProvider.getUriForFile(
                                     context,
-                                    "${context.packageName}.fileprovider",
+                                    "${context.packageName}.provider",
                                     tempFile
                                 )
 
