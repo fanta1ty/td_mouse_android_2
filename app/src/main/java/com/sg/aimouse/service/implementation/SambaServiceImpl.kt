@@ -138,12 +138,16 @@ class SambaServiceImpl(
                     // Refresh files in current path
                     withContext(Dispatchers.Main) {
                         toast(R.string.delete_file_succeeded)
-                        retrieveRemoteFilesSMB(_currentRemotePath)
+                        retrieveRemoteFilesSMB(currentRemotePath)
                     }
                 }
             } catch (e: Exception) {
                 Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to delete remote file", e)
                 withContext(Dispatchers.Main) { toast(R.string.delete_file_error) }
+                // Only reconnect if it's a connection issue
+                if (e is IOException || diskShare == null || !isConnected()) {
+                    _smbState.value = SMBState.RECONNECT
+                }
             }
         }
     }
@@ -323,7 +327,7 @@ class SambaServiceImpl(
             withContext(Dispatchers.Main) { 
                 if (targetDirectory == null) { // Only show toast for downloads, not temp files
                     toast(R.string.save_file_succeeded)
-                    retrieveRemoteFilesSMB() // Only refresh list for actual downloads, not previews
+                    retrieveRemoteFilesSMB(currentRemotePath) // Only refresh list for actual downloads, not previews
                 }
             }
 
@@ -406,7 +410,7 @@ class SambaServiceImpl(
         }
     }
 
-    override suspend fun uploadFolderSMB(localFolderPath: String): TransferStats? {
+    override suspend fun uploadFolderSMB(localFolderPath: String, remotePath: String): TransferStats? {
         _isTransferringFileSMB = true
         val openHandles = mutableListOf<AutoCloseable>()
 
@@ -421,8 +425,10 @@ class SambaServiceImpl(
                 return null
             }
 
-            val relativePath = localFolder.name
-            diskShare!!.mkdir(relativePath)
+            val folderName = localFolder.name
+            // Create the folder in the specified remote path
+            val remoteFolderPath = if (remotePath.isEmpty()) folderName else "$remotePath/$folderName"
+            diskShare!!.mkdir(remoteFolderPath)
 
             val startTime = System.currentTimeMillis()
             var totalBytesCopied = 0L
@@ -431,9 +437,19 @@ class SambaServiceImpl(
             localFolder.walkTopDown().forEach { file ->
                 try {
                     if (file.isFile) {
-                        val remotePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                        // Calculate the relative path from the local folder
+                        val localRelativePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                        
+                        // Construct the remote path by replacing the folder name with the remote folder path
+                        val remoteFilePath = if (remotePath.isEmpty()) {
+                            localRelativePath
+                        } else {
+                            // Replace the first part of the path (folder name) with the remote path + folder name
+                            "$remotePath/$localRelativePath"
+                        }
+                        
                         val remoteFile = diskShare!!.openFile(
-                            remotePath,
+                            remoteFilePath,
                             setOf(AccessMask.GENERIC_WRITE),
                             null,
                             SMB2ShareAccess.ALL,
@@ -454,8 +470,18 @@ class SambaServiceImpl(
                         remoteFile.close()
                         openHandles.remove(remoteFile)
                     } else if (file.isDirectory && file != localFolder) {
-                        val dirPath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
-                        diskShare!!.mkdir(dirPath)
+                        // Calculate the relative path from the local folder
+                        val localRelativePath = file.absolutePath.removePrefix(localFolder.parent + JavaFile.separator)
+                        
+                        // Construct the remote path by replacing the folder name with the remote folder path
+                        val remoteDirPath = if (remotePath.isEmpty()) {
+                            localRelativePath
+                        } else {
+                            // Replace the first part of the path (folder name) with the remote path + folder name
+                            "$remotePath/$localRelativePath"
+                        }
+                        
+                        diskShare!!.mkdir(remoteDirPath)
                     }
                 } catch (e: Exception) {
                     Log.e(AiMouseSingleton.DEBUG_TAG, "Error uploading ${file.path}", e)
@@ -469,7 +495,8 @@ class SambaServiceImpl(
 
             withContext(Dispatchers.Main) {
                 toast(R.string.upload_file_succeeded)
-                retrieveRemoteFilesSMB()
+                // Refresh using the original remote path (where we were before the upload)
+                retrieveRemoteFilesSMB(remotePath)
             }
 
             TransferStats(

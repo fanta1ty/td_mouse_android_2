@@ -51,7 +51,7 @@ class HomeViewModel(
     fun retrieveRemoteFilesSMB(folderName: String = "") = _sambaDelegate.retrieveRemoteFilesSMB(folderName)
     suspend fun uploadFileSMB(fileName: String, remotePath: String) = _sambaDelegate.uploadFileSMB(fileName, remotePath)
     suspend fun downloadFileSMB(fileName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFileSMB(fileName, targetDirectory)
-    suspend fun uploadFolderSMB(folderName: String) = _sambaDelegate.uploadFolderSMB(folderName)
+    suspend fun uploadFolderSMB(folderName: String, remotePath: String) = _sambaDelegate.uploadFolderSMB(folderName, remotePath)
     suspend fun downloadFolderSMB(folderName: String, targetDirectory: JavaFile? = null) = _sambaDelegate.downloadFolderSMB(folderName, targetDirectory)
     fun updateSMBState(state: SMBState) = _sambaDelegate.updateSMBState(state)
     fun deleteFileSMB(fileName: String) = _sambaDelegate.deleteFileSMB(fileName)
@@ -129,10 +129,20 @@ class HomeViewModel(
         }
     }
 
+    fun refreshRemoteFiles() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                retrieveRemoteFilesSMB(currentRemotePath)
+            } catch (e: Exception) {
+                Log.e(AiMouseSingleton.DEBUG_TAG, "Failed to refresh remote files", e)
+            }
+        }
+    }
+
     fun uploadFileOrFolder(file: File) {
         CoroutineScope(Dispatchers.IO).launch {
             val stats = if (file.isDirectory) {
-                uploadFolderSMB(file.path)
+                uploadFolderSMB(file.path, currentRemotePath)
             } else {
                 uploadFileSMB(file.path, currentRemotePath)
             }
@@ -142,6 +152,8 @@ class HomeViewModel(
                 if (lastTransferStats != null) {
                     showTransferDialog.value = true
                 }
+                // Force refresh the remote files list after upload
+                refreshRemoteFiles()
             }
         }
     }
