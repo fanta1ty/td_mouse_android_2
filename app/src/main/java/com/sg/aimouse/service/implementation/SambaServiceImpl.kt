@@ -1,7 +1,6 @@
 package com.sg.aimouse.service.implementation
 
 import android.content.Context
-import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import androidx.annotation.StringRes
@@ -152,7 +151,7 @@ class SambaServiceImpl(
         }
     }
 
-    fun isConnected(): Boolean {
+    override fun isConnected(): Boolean {
         return _smbState.value == SMBState.CONNECTED
     }
 

@@ -21,4 +21,5 @@ interface SambaService {
     suspend fun downloadFolderSMB(remoteFolderName: String, targetDirectory: JavaFile? = null): TransferStats?
     fun updateSMBState(state: SMBState)
     fun deleteFileSMB(fileName: String)
+    fun isConnected(): Boolean
 }

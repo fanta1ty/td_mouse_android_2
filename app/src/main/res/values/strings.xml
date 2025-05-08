@@ -42,4 +42,9 @@
     <string name="delete_file_error">Failed to delete file!</string>
     <string name="transfer_summary">Summary Info</string>
     <string name="folder_not_found">Folder not found</string>
+
+    <string name="scan_ble_devices">Scan devices</string>
+    <string name="ble_no_devices_found">No TD Mouse devices found</string>
+    <string name="ble_device_found">TD Mouse device found</string>
+    <string name="scanning_ble_devices">Scanning for TD Mouse devices...</string>
 </resources>

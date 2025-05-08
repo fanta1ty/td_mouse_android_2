@@ -1,4 +1,4 @@
-package com.sg.aimouse.presentation.screen.home.state
+package com.sg.aimouse.presentation.screen.localfile.state
 
 import android.os.Build
 import android.provider.Settings
@@ -6,13 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.sg.aimouse.presentation.screen.home.HomeViewModel
+import com.sg.aimouse.presentation.screen.localfile.LocalfileViewModel
 import com.sg.aimouse.service.PermissionService
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
-class HomeStateHolder(
+class LocalfileStateHolder(
     val activity: ComponentActivity,
-    val viewModel: HomeViewModel
+    val viewModel: LocalfileViewModel
 ) : PermissionService by PermissionServiceImpl() {
 
     var shouldShowStoragePermissionRequiredDialog by mutableStateOf(false)

@@ -24,6 +24,10 @@ import androidx.compose.runtime.setValue
 import android.widget.Toast
 import android.util.Log
 import com.sg.aimouse.common.AiMouseSingleton
+import com.sg.aimouse.service.BLEService
+import com.sg.aimouse.service.BluetoothDevice
+import com.sg.aimouse.service.implementation.BLEServiceSingleton
+import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 class HomeViewModel(
     private val context: Context,
@@ -31,6 +35,8 @@ class HomeViewModel(
 ) : ViewModel() {
     private val localFileService = LocalFileServiceImpl(context)
     private val actualSambaService = sambaService ?: SambaServiceImpl(context, localFileService)
+    private val bleService: BLEService = BLEServiceSingleton.getInstance(context)
+    private val permissionService = PermissionServiceImpl()
 
     // Delegate to services
     private val _localFileDelegate = localFileService
@@ -325,8 +331,72 @@ class HomeViewModel(
         }
     }
 
+    // BLE related methods
+    fun isBleConnected(): Boolean {
+        return bleService.isConnected()
+    }
+
+    fun isBluetoothEnabled(): Boolean {
+        return bleService.isBluetoothEnabled()
+    }
+
+    /**
+     * Scan for Bluetooth devices
+     * @param callback Callback function that will be called when devices are found
+     */
+    fun scanForBluetoothDevices(callback: (List<BluetoothDevice>) -> Unit) {
+        if (permissionService.hasBluetoothPermission(context)) {
+            bleService.scanForDevices(callback)
+        } else {
+            permissionService.requestPermissions(context, permissionService.requiredBluetoothPermissions, {
+                bleService.scanForDevices(callback)
+            }, {
+                Log.e("HomeViewModel", "Bluetooth permissions denied")
+                callback(emptyList())
+            })
+        }
+    }
+
+    /**
+     * Connect to a Bluetooth device
+     * @param device The device to connect to
+     * @param callback Callback function that will be called when connection status changes
+     */
+    fun connectToBluetoothDevice(device: BluetoothDevice, callback: (Boolean) -> Unit) {
+        bleService.connectToDevice(device, callback)
+    }
+
+    /**
+     * Get the currently connected Bluetooth device
+     * @return The connected device or null if not connected
+     */
+    fun getConnectedBluetoothDevice(): BluetoothDevice? {
+        return bleService.getConnectedDevice()
+    }
+
+    /**
+     * Disconnect from the currently connected Bluetooth device
+     */
+    fun disconnectBluetoothDevice() {
+        bleService.disconnect()
+    }
+
+    /**
+     * Đăng ký callback theo dõi trạng thái kết nối BLE
+     * @param callback Callback function that will be called when connection state changes
+     */
+    fun registerBleConnectionCallback(callback: (Boolean) -> Unit) {
+        bleService.registerConnectionStateCallback(callback)
+    }
+
+    fun isSMBConnected(): Boolean {
+        return actualSambaService.isConnected()
+    }
+
     override fun onCleared() {
         closeSMB(isRelease = true)
+        bleService.unregisterConnectionStateCallback()
+        bleService.disconnect()
         super.onCleared()
     }
 }

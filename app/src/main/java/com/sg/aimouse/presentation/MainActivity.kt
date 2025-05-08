@@ -20,6 +20,7 @@ import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.presentation.screen.connect.ConnectionScreen
 import com.sg.aimouse.presentation.screen.home.HomeScreen
+import com.sg.aimouse.presentation.screen.localfile.LocalfileScreen
 import com.sg.aimouse.presentation.ui.theme.AiMouseTheme
 
 @SuppressLint("SourceLockedOrientationActivity")
@@ -50,12 +51,13 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.ConnectionScreen.route
+                            startDestination = Screen.LocalfileScreen.route
                         ) {
                             composable(Screen.ConnectionScreen.route) {
                                 ConnectionScreen(navController = navController)
                             }
-                            composable(Screen.HomeScreen.route) { HomeScreen() }
+                            composable(Screen.HomeScreen.route) { HomeScreen(navController = navController) }
+                            composable(Screen.LocalfileScreen.route) { LocalfileScreen(navController = navController) }
                         }
                     }
                 }
