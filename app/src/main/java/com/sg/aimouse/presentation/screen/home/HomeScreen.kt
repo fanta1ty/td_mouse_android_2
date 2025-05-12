@@ -364,11 +364,34 @@ fun HomeScreen(navController: NavController? = null) {
                             .fillMaxWidth()
                             .background(color = colorResource(R.color.light_gray_ED), shape = RoundedCornerShape(14.dp))
                     ) {
-                        Text(
-                            text = stringResource(R.string.title_tdmouse_drive),
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(start = 16.dp, top = 3.dp, bottom = 3.dp)
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 4.dp, vertical = 1.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.title_tdmouse_drive),
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    top = 3.dp,
+                                    bottom = 3.dp
+                                )
+                            )
+                            Text(
+                                text = if (bleConnected) "BLE Connected" else "BLE Disconnected",
+                                color = if (bleConnected) Color.Green else Color.Red,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(
+                                    start = 16.dp,
+                                    top = 3.dp,
+                                    bottom = 3.dp,
+                                    end = 16.dp
+                                )
+                            )
+                        }
                     }
                     if (viewModel.currentRemotePath.isNotEmpty()) {
                         IconButton(

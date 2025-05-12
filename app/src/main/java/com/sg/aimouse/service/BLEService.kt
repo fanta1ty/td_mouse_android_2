@@ -17,6 +17,8 @@ interface BLEService {
     fun unregisterConnectionStateCallback()
     
     fun isBluetoothEnabled(): Boolean
+
+    fun readCharacteristic(uuid: String, callback: (ByteArray) -> Unit)
 }
 
 data class BluetoothDevice(

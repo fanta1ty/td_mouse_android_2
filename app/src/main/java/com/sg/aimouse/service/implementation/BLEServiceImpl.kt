@@ -18,6 +18,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import com.sg.aimouse.service.BLEService
 import com.sg.aimouse.service.BluetoothDevice as AppBluetoothDevice
@@ -398,6 +399,19 @@ class BLEServiceImpl(private val context: Context) : BLEService {
             address = device.address,
             isTDDevice = deviceName?.startsWith("TD") ?: false
         )
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    override fun readCharacteristic(uuid: String, callback: (ByteArray) -> Unit) {
+        val gatt = bluetoothGatt ?: return
+        val service = gatt.services.find { service ->
+            service.characteristics.any { it.uuid.toString() == uuid }
+        } ?: return
+
+        val characteristic = service.characteristics.find { it.uuid.toString() == uuid } ?: return
+
+        bluetoothGatt?.readCharacteristic(characteristic)
+        // Handle the callback in your BLE callback implementation when the read is complete
     }
     
     override fun registerConnectionStateCallback(callback: (Boolean) -> Unit) {

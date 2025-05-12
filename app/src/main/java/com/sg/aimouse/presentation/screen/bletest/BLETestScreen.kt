@@ -23,18 +23,18 @@ import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 fun BLETestScreen(navController: NavController) {
     val context = LocalContext.current
     val activity = LocalActivity.current
-
+    
     var connectionDetails by remember { mutableStateOf("") }
     var testResult by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var sambaConnectionResult by remember { mutableStateOf("") }
-
+    
     val connectionViewModel = remember { ConnectionViewModel(context) }
-
+    
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Kiểm tra kết nối BLE") },
+                title = { Text("Test BLE Connection") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
@@ -54,14 +54,14 @@ fun BLETestScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Hiển thị thông tin kết nối
+            // Show connection information
             Text(
-                text = "Thông tin kết nối BLE",
+                text = "BLE Connection Information",
                 style = MaterialTheme.typography.titleMedium
             )
-
+            
             Spacer(modifier = Modifier.height(8.dp))
-
+            
             Text(
                 text = connectionDetails,
                 style = MaterialTheme.typography.bodyMedium,
@@ -70,20 +70,20 @@ fun BLETestScreen(navController: NavController) {
                     .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
                     .padding(8.dp)
             )
-
+            
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Nút kiểm tra kết nối
+            
+            // button to test BLE connection
             Button(
                 onClick = {
                     isLoading = true
-//                    connectionDetails = BLEConnectionTester.getConnectionDetails(context)
-
+                    connectionDetails = BLEConnectionTester.getConnectionDetails(context)
+                    
                     BLEConnectionTester.testConnection(context) { success, message ->
                         testResult = if (success) {
-                            "✅ Kết nối BLE hoạt động: $message"
+                            "✅ BLE connection working: $message"
                         } else {
-                            "❌ Kết nối BLE không hoạt động: $message"
+                            "❌ BLE connection not working: $message"
                         }
                         isLoading = false
                     }
@@ -99,7 +99,68 @@ fun BLETestScreen(navController: NavController) {
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
+                Text("Test BLE connection")
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // button to navigate to Samba connection screen
+            OutlinedButton(
+                onClick = {
+                    navController.navigate(Screen.ConnectionScreen.route)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading
+            ) {
+                Text("Navigate to Samba Connection Screen")
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Show the result of the BLE connection test
+            if (testResult.isNotEmpty()) {
+                Text(
+                    text = "Result of BLE Connection Test",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = testResult,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                )
+            }
+            
+            // Show the result of the Samba connection
+            if (sambaConnectionResult.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                Text(
+                    text = "Navigate to Samba Connection",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = sambaConnectionResult,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                        .padding(8.dp)
+                )
             }
         }
+    }
+    
+    // Update connection details when the screen is displayed
+    LaunchedEffect(Unit) {
+        connectionDetails = BLEConnectionTester.getConnectionDetails(context)
     }
 }

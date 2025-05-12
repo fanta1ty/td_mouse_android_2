@@ -26,7 +26,7 @@ import com.sg.aimouse.service.BluetoothDevice
 import com.sg.aimouse.service.implementation.BLEServiceSingleton
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
-class LocalfileViewModel(
+class LocalFileViewModel(
     private val context: Context
 ) : ViewModel() {
     private val localFileService = LocalFileServiceImpl(context)
@@ -124,6 +124,14 @@ class LocalfileViewModel(
 
     fun isBluetoothEnabled(): Boolean {
         return bleService.isBluetoothEnabled()
+    }
+
+    fun bleDisconnect() {
+        bleService.disconnect()
+    }
+
+    fun readBleCharacteristic(uuid: String, callback: (ByteArray) -> Unit) {
+        bleService.readCharacteristic(uuid, callback)
     }
 
     fun scanForBluetoothDevices(callback: (List<BluetoothDevice>) -> Unit) {

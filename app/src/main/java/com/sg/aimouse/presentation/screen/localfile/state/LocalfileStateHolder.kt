@@ -6,13 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.sg.aimouse.presentation.screen.localfile.LocalfileViewModel
+import com.sg.aimouse.presentation.screen.localfile.LocalFileViewModel
 import com.sg.aimouse.service.PermissionService
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 class LocalfileStateHolder(
     val activity: ComponentActivity,
-    val viewModel: LocalfileViewModel
+    val viewModel: LocalFileViewModel
 ) : PermissionService by PermissionServiceImpl() {
 
     var shouldShowStoragePermissionRequiredDialog by mutableStateOf(false)

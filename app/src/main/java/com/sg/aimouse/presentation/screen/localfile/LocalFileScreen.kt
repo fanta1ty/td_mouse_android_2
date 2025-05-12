@@ -42,11 +42,11 @@ import com.sg.aimouse.service.BluetoothDevice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LocalfileScreen(navController: NavController? = null) {
+fun LocalFileScreen(navController: NavController? = null) {
     val activity = LocalActivity.current
 
-    val viewModel: LocalfileViewModel = viewModel(
-        factory = viewModelFactory { LocalfileViewModel(activity) }
+    val viewModel: LocalFileViewModel = viewModel(
+        factory = viewModelFactory { LocalFileViewModel(activity) }
     )
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -74,7 +74,7 @@ fun LocalfileScreen(navController: NavController? = null) {
     var foundDevices by remember { mutableStateOf<List<BluetoothDevice>>(emptyList()) }
     var isConnecting by remember { mutableStateOf(false) }
 
-    // Trạng thái kết nối BLE
+    // BLE connection status
     var bleConnected by remember { mutableStateOf(viewModel.isBleConnected()) }
 
     fun checkBluetoothConnection() {
@@ -99,7 +99,7 @@ fun LocalfileScreen(navController: NavController? = null) {
         if (bleConnected && navController != null) {
             // Close the scan dialog if BLE connected
             showBLEScanDialog = false
-            navController.navigate(Screen.ConnectionScreen.route)
+            navController.navigate(Screen.TransferScreen.route)
         }
     }
 
@@ -316,6 +316,54 @@ fun LocalfileScreen(navController: NavController? = null) {
                         .background(Color.White, shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                         .padding(top = 5.dp, start = 5.dp, end = 5.dp)
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            if (bleConnected) {
+                                Button(
+                                    onClick = {
+                                        // Read characteristic from BLE service and save to file
+                                        val uuid = "0000ffe8-0000-1000-8000-00805f9b34fb"
+                                        viewModel.readBleCharacteristic(uuid) { data ->
+                                            val file = java.io.File(Environment.getExternalStorageDirectory().path + "/data.txt")
+                                            file.writeBytes(data)
+                                        }
+                                    },
+                                    modifier = Modifier.padding(start = 16.dp, bottom = 3.dp)
+                                ) {
+                                    Text("Test Read File")
+                                }
+                            } else {
+                                Text(
+                                    text = "BLE Not Connected",
+                                    color = Color.Red,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(start = 16.dp, bottom = 3.dp)
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = {
+                                if (bleConnected) {
+                                    viewModel.bleDisconnect()
+                                } else {
+                                    checkBluetoothConnection()
+                                }
+                            },
+                            modifier = Modifier.padding(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Disconnect",
+                                tint = Color.Black
+                            )
+                        }
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -348,6 +396,13 @@ fun LocalfileScreen(navController: NavController? = null) {
                                         text = stringResource(R.string.scan_ble_devices)
                                     )
                                 }
+                            } else {
+                                Text(
+                                    text = "BLE Connected",
+                                    color = Color.Green,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp)
+                                )
                             }
                         }
                     }
