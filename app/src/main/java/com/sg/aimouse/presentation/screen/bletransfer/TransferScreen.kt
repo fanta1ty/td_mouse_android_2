@@ -26,16 +26,6 @@ import com.sg.aimouse.service.implementation.BLEFileTransferManager
 import com.sg.aimouse.service.implementation.TransferState
 import com.sg.aimouse.service.BLEService
 
-//class MainActivity : ComponentActivity() {
-//    override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        val bleManager = BLEFileTransferManager(this)
-//        setContent {
-//            BLEFileTransferApp(bleManager)
-//        }
-//    }
-//}
-
 @SuppressLint("MissingPermission")
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 @OptIn(ExperimentalMaterial3Api::class)
