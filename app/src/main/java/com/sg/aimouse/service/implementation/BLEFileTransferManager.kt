@@ -34,13 +34,6 @@ enum class FileCommand(val value: Byte) {
     CHUNK_RECEIVED(0x07),
     COMPLETE(0x08)
 }
-//enum class FileCommand(val value: Byte) {
-//    START_TRANSFER(0x01),
-//    REQUEST_CHUNK(0x03), // Changed from 0x06 to 0x03
-//    ACK(0x04),
-//    COMPLETE_TRANSFER(0x05),
-//    ERROR(0xFF.toByte())
-//}
 
 enum class TransferState {
     IDLE, CONNECTING, PREPARING, TRANSFERRING, SAVING, COMPLETE, ERROR
@@ -134,6 +127,7 @@ class BLEFileTransferManager(private val context: Context) {
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                gatt?.requestMtu(180)
                 gatt?.services?.find { it.uuid == BLEConstants.SERVICE_UUID }?.let { service ->
                     fileControlCharacteristic = service.getCharacteristic(BLEConstants.FILE_CONTROL_CHAR_UUID)
                     fileInfoCharacteristic = service.getCharacteristic(BLEConstants.FILE_INFO_CHAR_UUID)
@@ -340,6 +334,10 @@ class BLEFileTransferManager(private val context: Context) {
             // Request first chunk
             currentChunk.value = 0
             requestChunk(currentChunk.value)
+
+            println("==> Chunk ${currentChunk.value} data: ${String(data)}, size: ${data.size} bytes")
+            println("==> Raw data: ${data.joinToString { it.toInt().toString(16) }}")
+            println("==> Reported file size: ${fileSize.value} bytes")
         } catch (e: Exception) {
             state.value = TransferState.ERROR
             errorMessage.value = "Failed to process file info: ${e.localizedMessage}"
@@ -375,11 +373,12 @@ class BLEFileTransferManager(private val context: Context) {
 
         fileData.addAll(data.toList())
         currentChunk.value += 1
-        progress.value = currentChunk.value.toDouble() / totalChunks.value
+//        progress.value = currentChunk.value.toDouble() / totalChunks.value
+        progress.value = fileData.size.toDouble() / 2048.0
 
         println("==> Current chunk: ${currentChunk.value}, Total chunks: ${totalChunks.value}, File data size: ${fileData.size} bytes")
 
-        if (currentChunk.value < totalChunks.value) {
+        if (fileData.size < 2048) {
             requestChunk(currentChunk.value)
         } else {
             completeTransfer()

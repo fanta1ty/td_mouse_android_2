@@ -2,7 +2,11 @@
 
 package com.sg.aimouse.presentation.screen.localfile
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.os.Environment
+import android.util.Log
+import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,6 +15,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
@@ -39,11 +47,20 @@ import androidx.navigation.NavController
 import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.presentation.screen.localfile.state.LocalfileStateHolder
 import com.sg.aimouse.service.BluetoothDevice
+import com.sg.aimouse.service.implementation.BLEFileTransferManager
+import androidx.compose.runtime.remember
+import com.sg.aimouse.service.implementation.TransferState
 
+@SuppressLint("MissingPermission")
+@RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocalFileScreen(navController: NavController? = null) {
     val activity = LocalActivity.current
+
+    var showDevicesDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val bleManager = remember { BLEFileTransferManager(context) }
 
     val viewModel: LocalFileViewModel = viewModel(
         factory = viewModelFactory { LocalFileViewModel(activity) }
@@ -99,10 +116,19 @@ fun LocalFileScreen(navController: NavController? = null) {
         if (bleConnected && navController != null) {
             // Close the scan dialog if BLE connected
             showBLEScanDialog = false
-            navController.navigate(Screen.TransferScreen.route)
+//            navController.navigate(Screen.ConnectionScreen.route)
         }
     }
 
+    // refresh local files when transfer is complete
+    LaunchedEffect(bleManager.state.value) {
+        if (bleManager.state.value == TransferState.COMPLETE) {
+            // Refresh the local files
+            isRefreshingLocal = true
+            viewModel.retrieveLocalFiles()
+            isRefreshingLocal = false
+        }
+    }
 
     LaunchedEffect(isRefreshingLocal) {
         if (isRefreshingLocal) {
@@ -186,7 +212,7 @@ fun LocalFileScreen(navController: NavController? = null) {
     }
 
     // BLE Scan Dialog
-    if (showBLEScanDialog) {
+    /*if (showBLEScanDialog) {
         Dialog(onDismissRequest = { showBLEScanDialog = false }) {
             Card(
                 modifier = Modifier
@@ -287,6 +313,63 @@ fun LocalFileScreen(navController: NavController? = null) {
                 }
             }
         }
+    }*/
+
+    // TD Mouse Device Selection Dialog
+    if (showDevicesDialog) {
+        Dialog(onDismissRequest = {
+            bleManager.stopScanning()
+            showDevicesDialog = false
+        }) {
+            Card {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                ) {
+                    Text("Available BLE Devices", style = MaterialTheme.typography.titleLarge)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (bleManager.discoveredDevices.value.isEmpty()) {
+                        Text("Scanning for TD devices...")
+                    } else {
+                        LazyColumn {
+                            items(bleManager.discoveredDevices.value) { device ->
+                                TextButton(
+                                    onClick = {
+                                        bleManager.connect(device)
+                                        bleManager.stopScanning()
+                                        showDevicesDialog = false
+                                    }
+                                ) {
+                                    Row {
+                                        Icon(
+                                            imageVector = Icons.Default.Share,
+                                            contentDescription = null,
+                                            tint = Color.Blue
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column {
+                                            Text(device.name ?: "Unknown Device", style = MaterialTheme.typography.titleMedium)
+                                            Text(device.address, style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            bleManager.stopScanning()
+                            showDevicesDialog = false
+                        },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        }
     }
 
     Scaffold { innerPaddings ->
@@ -323,45 +406,82 @@ fun LocalFileScreen(navController: NavController? = null) {
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
-                            if (bleConnected) {
+                        Column(
+                            modifier = Modifier,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        )  {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (bleManager.connectedDevice.value != null) {
+                                        Icons.Default.CheckCircle
+                                    } else {
+                                        Icons.Default.Clear
+                                    },
+                                    contentDescription = null,
+                                    tint = if (bleManager.connectedDevice.value != null) Color.Green else Color.Red
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (bleManager.connectedDevice.value != null) {
+                                        "Connected: ${bleManager.connectedDevice.value?.name ?: ""}"
+                                    } else {
+                                        "BLE Not Connected"
+                                    }
+                                )
+                                Spacer(modifier = Modifier.weight(1f))
                                 Button(
                                     onClick = {
-                                        // Read characteristic from BLE service and save to file
-                                        val uuid = "0000ffe8-0000-1000-8000-00805f9b34fb"
-                                        viewModel.readBleCharacteristic(uuid) { data ->
-                                            val file = java.io.File(Environment.getExternalStorageDirectory().path + "/data.txt")
-                                            file.writeBytes(data)
+                                        if (bleManager.connectedDevice.value != null) {
+                                            bleManager.disconnect()
+                                        } else {
+                                            bleManager.startScanning()
+                                            showDevicesDialog = true
                                         }
-                                    },
-                                    modifier = Modifier.padding(start = 16.dp, bottom = 3.dp)
+                                    }
                                 ) {
-                                    Text("Test Read File")
+                                    Text(if (bleManager.connectedDevice.value != null) "Disconnect" else "Connect")
                                 }
-                            } else {
-                                Text(
-                                    text = "BLE Not Connected",
-                                    color = Color.Red,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(start = 16.dp, bottom = 3.dp)
-                                )
                             }
-                        }
-                        IconButton(
-                            onClick = {
-                                if (bleConnected) {
-                                    viewModel.bleDisconnect()
-                                } else {
-                                    checkBluetoothConnection()
+
+                            // Transfer Status
+                            when (bleManager.state.value) {
+                                TransferState.TRANSFERRING -> {
+                                    Divider(modifier = Modifier.padding(vertical = 10.dp))
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        LinearProgressIndicator(progress = bleManager.progress.value.toFloat())
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("Transferring: ${bleManager.fileName.value}", style = MaterialTheme.typography.titleMedium)
+                                        Text(
+                                            "${(bleManager.progress.value * 100).toInt()}% - Chunk ${bleManager.currentChunk.value}/${bleManager.totalChunks.value}",
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                    Divider(modifier = Modifier.padding(vertical = 10.dp))
                                 }
-                            },
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Disconnect",
-                                tint = Color.Black
-                            )
+                                TransferState.COMPLETE -> {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text("Transfer Complete!", style = MaterialTheme.typography.titleMedium)
+                                        Text(bleManager.fileName.value, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                                else -> {
+                                }
+                            }
+
+                            // Action Buttons
+                            if (bleManager.connectedDevice.value != null && bleManager.state.value != TransferState.TRANSFERRING) {
+                                Divider(modifier = Modifier.padding(vertical = 10.dp))
+                                Button(
+                                    onClick = { bleManager.startTransfer() },
+                                    enabled = true // Adjust based on your logic
+                                ) {
+                                    Text("Start File Transfer")
+                                }
+                                Divider(modifier = Modifier.padding(vertical = 10.dp))
+                            }
                         }
                     }
                     Box(
@@ -385,25 +505,6 @@ fun LocalFileScreen(navController: NavController? = null) {
                                     bottom = 3.dp
                                 )
                             )
-                            if (!bleConnected) {
-                                Button(
-                                    onClick = { showBLEScanDialog = true },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary
-                                    )
-                                ) {
-                                    Text(
-                                        text = stringResource(R.string.scan_ble_devices)
-                                    )
-                                }
-                            } else {
-                                Text(
-                                    text = "BLE Connected",
-                                    color = Color.Green,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp)
-                                )
-                            }
                         }
                     }
                     // Back button
@@ -450,7 +551,9 @@ fun LocalFileScreen(navController: NavController? = null) {
                                     localListSize = coordinates.size
                                 }
                         ) {
-                            items(viewModel.localFiles, key = { it.path + it.fileName }) { file ->
+                            items(
+                                viewModel.localFiles,
+                                key = { it.path + it.fileName }) { file ->
                                 FileItem(
                                     file = file,
                                     onClick = {
@@ -466,6 +569,26 @@ fun LocalFileScreen(navController: NavController? = null) {
                                     },
                                     refreshTrigger = refreshTrigger
                                 )
+                            }
+                        }
+
+                        if (viewModel.localFiles.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "Empty folder",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = Color.Gray
+                                    )
+                                }
                             }
                         }
                     }

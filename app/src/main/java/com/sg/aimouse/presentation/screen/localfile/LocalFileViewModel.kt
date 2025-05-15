@@ -1,5 +1,6 @@
 package com.sg.aimouse.presentation.screen.localfile
 
+import android.Manifest
 import java.net.URLConnection
 
 import android.content.Context
@@ -20,9 +21,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import android.widget.Toast
 import android.util.Log
+import androidx.annotation.RequiresPermission
 import com.sg.aimouse.common.AiMouseSingleton
 import com.sg.aimouse.service.BLEService
 import com.sg.aimouse.service.BluetoothDevice
+import com.sg.aimouse.service.implementation.BLEFileTransferManager
 import com.sg.aimouse.service.implementation.BLEServiceSingleton
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
@@ -32,6 +35,7 @@ class LocalFileViewModel(
     private val localFileService = LocalFileServiceImpl(context)
     private val bleService: BLEService = BLEServiceSingleton.getInstance(context)
     private val permissionService = PermissionServiceImpl()
+    private val bleManager = BLEFileTransferManager(context)
 
     // Delegate to services
     private val _localFileDelegate = localFileService
@@ -128,6 +132,19 @@ class LocalFileViewModel(
 
     fun bleDisconnect() {
         bleService.disconnect()
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    fun startBLEScanning() {
+        bleManager.startScanning()
+    }
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
+    fun stopBLEScanning() {
+        bleManager.stopScanning()
+    }
+
+    fun connectedDevice (): BluetoothDevice? {
+        return bleService.getConnectedDevice()
     }
 
     fun readBleCharacteristic(uuid: String, callback: (ByteArray) -> Unit) {

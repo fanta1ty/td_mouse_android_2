@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.TransferScreen.route
+                            startDestination = Screen.LocalFileScreen.route
                         ) {
                             composable(Screen.ConnectionScreen.route) {
                                 ConnectionScreen(navController = navController)

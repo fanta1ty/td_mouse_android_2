@@ -2,9 +2,7 @@ package com.sg.aimouse.presentation.screen.bletransfer
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,9 +20,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.service.implementation.BLEFileTransferManager
 import com.sg.aimouse.service.implementation.TransferState
-import com.sg.aimouse.service.BLEService
 
 @SuppressLint("MissingPermission")
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -64,7 +62,7 @@ fun BLEFileTransferApp(navController: NavController) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = if (bleManager.connectedDevice.value != null) {
-                            "Connected to: ${bleManager.connectedDevice.value?.name ?: ""}"
+                            "Connected: ${bleManager.connectedDevice.value?.name ?: ""}"
                         } else {
                             "Not Connected"
                         }
@@ -110,22 +108,12 @@ fun BLEFileTransferApp(navController: NavController) {
                             Text("Transfer Complete!", style = MaterialTheme.typography.titleMedium)
                             Text(bleManager.fileName.value, style = MaterialTheme.typography.bodySmall)
                         }
+
+                        Divider(modifier = Modifier.padding(vertical = 16.dp))
                     }
                     else -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = Color.Green,
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Text("Transfer Not Run!", style = MaterialTheme.typography.titleMedium)
-                            Text(bleManager.fileName.value, style = MaterialTheme.typography.bodySmall)
-                        }
                     }
                 }
-
-                Divider(modifier = Modifier.padding(vertical = 16.dp))
 
                 // Action Buttons
                 if (bleManager.connectedDevice.value != null && bleManager.state.value != TransferState.TRANSFERRING) {
@@ -167,6 +155,15 @@ fun BLEFileTransferApp(navController: NavController) {
                     Spacer(modifier = Modifier.weight(1f))
                     Text("No files transferred yet", color = Color.Gray)
                     Spacer(modifier = Modifier.weight(1f))
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        navController.navigate(Screen.LocalFileScreen.route)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Navigate to Local Files")
                 }
             }
 
