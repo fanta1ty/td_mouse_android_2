@@ -24,16 +24,21 @@ import com.sg.aimouse.presentation.screen.connect.ConnectionScreen
 import com.sg.aimouse.presentation.screen.home.HomeScreen
 import com.sg.aimouse.presentation.screen.localfile.LocalFileScreen
 import com.sg.aimouse.presentation.ui.theme.AiMouseTheme
+import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 @SuppressLint("SourceLockedOrientationActivity")
 class MainActivity : ComponentActivity() {
     private val mainViewModel by viewModels<MainViewModel>()
+    private val permissionService = PermissionServiceImpl()
 
     @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
+
+        // Request Bluetooth permissions at app startup
+        requestBluetoothPermissions()
 
         if (savedInstanceState != null) {
             val id = savedInstanceState.getInt(mainViewModel.viewModelId.first)
@@ -67,6 +72,21 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    private fun requestBluetoothPermissions() {
+        if (!permissionService.hasBluetoothPermission(this)) {
+            permissionService.requestPermissions(
+                context = this,
+                permissions = permissionService.requiredBluetoothPermissions,
+                permissionsGrantedListener = {
+                    // Permissions granted, can proceed with Bluetooth operations
+                },
+                permissionsDeniedListener = {
+                    // Handle denied permissions - maybe show a dialog explaining why permissions are needed
+                }
+            )
         }
     }
 
