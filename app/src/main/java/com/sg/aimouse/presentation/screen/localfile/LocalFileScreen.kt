@@ -44,12 +44,10 @@ import com.sg.aimouse.presentation.component.*
 import com.sg.aimouse.util.viewModelFactory
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
-import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.presentation.screen.localfile.state.LocalfileStateHolder
 import com.sg.aimouse.service.BluetoothDevice
-import com.sg.aimouse.service.implementation.BLEFileTransferManager
 import androidx.compose.runtime.remember
-import com.sg.aimouse.service.implementation.TransferState
+import com.sg.aimouse.presentation.navigation.Screen
 
 @SuppressLint("MissingPermission")
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -60,7 +58,6 @@ fun LocalFileScreen(navController: NavController? = null) {
 
     var showDevicesDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val bleManager = remember { BLEFileTransferManager(context) }
 
     val viewModel: LocalFileViewModel = viewModel(
         factory = viewModelFactory { LocalFileViewModel(activity) }
@@ -116,17 +113,6 @@ fun LocalFileScreen(navController: NavController? = null) {
         if (bleConnected && navController != null) {
             // Close the scan dialog if BLE connected
             showBLEScanDialog = false
-//            navController.navigate(Screen.ConnectionScreen.route)
-        }
-    }
-
-    // refresh local files when transfer is complete
-    LaunchedEffect(bleManager.state.value) {
-        if (bleManager.state.value == TransferState.COMPLETE) {
-            // Refresh the local files
-            isRefreshingLocal = true
-            viewModel.retrieveLocalFiles()
-            isRefreshingLocal = false
         }
     }
 
@@ -212,7 +198,7 @@ fun LocalFileScreen(navController: NavController? = null) {
     }
 
     // BLE Scan Dialog
-    /*if (showBLEScanDialog) {
+    if (showBLEScanDialog) {
         Dialog(onDismissRequest = { showBLEScanDialog = false }) {
             Card(
                 modifier = Modifier
@@ -313,12 +299,12 @@ fun LocalFileScreen(navController: NavController? = null) {
                 }
             }
         }
-    }*/
+    }
 
     // TD Mouse Device Selection Dialog
     if (showDevicesDialog) {
         Dialog(onDismissRequest = {
-            bleManager.stopScanning()
+            viewModel.stopScanningDevices()
             showDevicesDialog = false
         }) {
             Card {
@@ -329,15 +315,15 @@ fun LocalFileScreen(navController: NavController? = null) {
                 ) {
                     Text("Available BLE Devices", style = MaterialTheme.typography.titleLarge)
                     Spacer(modifier = Modifier.height(8.dp))
-                    if (bleManager.discoveredDevices.value.isEmpty()) {
+                    if (viewModel.discoveredDevices.isEmpty()) {
                         Text("Scanning for TD devices...")
                     } else {
                         LazyColumn {
-                            items(bleManager.discoveredDevices.value) { device ->
+                            items(viewModel.discoveredDevices) { device ->
                                 TextButton(
                                     onClick = {
-                                        bleManager.connect(device)
-                                        bleManager.stopScanning()
+                                        viewModel.connectToBluetoothDevice(device) { }
+                                        viewModel.stopScanningDevices()
                                         showDevicesDialog = false
                                     }
                                 ) {
@@ -360,7 +346,7 @@ fun LocalFileScreen(navController: NavController? = null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Button(
                         onClick = {
-                            bleManager.stopScanning()
+                            viewModel.stopScanningDevices()
                             showDevicesDialog = false
                         },
                         modifier = Modifier.align(Alignment.End)
@@ -374,18 +360,6 @@ fun LocalFileScreen(navController: NavController? = null) {
 
     Scaffold { innerPaddings ->
         Box(modifier = Modifier.fillMaxSize()) {
-            if (viewModel.showTransferDialog.value && viewModel.lastTransferStats != null && viewModel.lastTransferredFileName != null) {
-                TransferCompleteDialog(
-                    fileName = viewModel.lastTransferredFileName!!,
-                    fileSize = viewModel.lastTransferStats!!.fileSize,
-                    avgSpeedMBps = viewModel.lastTransferStats!!.avgSpeedMBps,
-                    maxSpeedMBps = viewModel.lastTransferStats!!.maxSpeedMBps,
-                    timeTakenSeconds = viewModel.lastTransferStats!!.timeTakenSeconds,
-                    onDismiss = {
-                        viewModel.showTransferDialog.value = false
-                    }
-                )
-            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -415,18 +389,18 @@ fun LocalFileScreen(navController: NavController? = null) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector = if (bleManager.connectedDevice.value != null) {
+                                    imageVector = if (viewModel.connectedDevice() != null) {
                                         Icons.Default.CheckCircle
                                     } else {
                                         Icons.Default.Clear
                                     },
                                     contentDescription = null,
-                                    tint = if (bleManager.connectedDevice.value != null) Color.Green else Color.Red
+                                    tint = if (viewModel.connectedDevice() != null) Color.Green else Color.Red
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = if (bleManager.connectedDevice.value != null) {
-                                        "Connected: ${bleManager.connectedDevice.value?.name ?: ""}"
+                                    text = if (viewModel.connectedDevice() != null) {
+                                        "Connected: ${viewModel.connectedDevice()?.name ?: ""}"
                                     } else {
                                         "BLE Not Connected"
                                     }
@@ -434,54 +408,19 @@ fun LocalFileScreen(navController: NavController? = null) {
                                 Spacer(modifier = Modifier.weight(1f))
                                 Button(
                                     onClick = {
-                                        if (bleManager.connectedDevice.value != null) {
-                                            bleManager.disconnect()
+                                        if (viewModel.connectedDevice() != null) {
+                                            viewModel.bleDisconnect()
                                         } else {
-                                            bleManager.startScanning()
+                                            viewModel.scanForBluetoothDevices { }
                                             showDevicesDialog = true
                                         }
                                     }
                                 ) {
-                                    Text(if (bleManager.connectedDevice.value != null) "Disconnect" else "Connect")
+                                    Text(if (viewModel.connectedDevice() != null) "Disconnect" else "Connect")
                                 }
                             }
 
-                            // Transfer Status
-                            when (bleManager.state.value) {
-                                TransferState.TRANSFERRING -> {
-                                    Divider(modifier = Modifier.padding(vertical = 10.dp))
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        LinearProgressIndicator(progress = bleManager.progress.value.toFloat())
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Text("Transferring: ${bleManager.fileName.value}", style = MaterialTheme.typography.titleMedium)
-                                        Text(
-                                            "${(bleManager.progress.value * 100).toInt()}% - Chunk ${bleManager.currentChunk.value}/${bleManager.totalChunks.value}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-                                    Divider(modifier = Modifier.padding(vertical = 10.dp))
-                                }
-                                TransferState.COMPLETE -> {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Transfer Complete!", style = MaterialTheme.typography.titleMedium)
-                                        Text(bleManager.fileName.value, style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                                else -> {
-                                }
-                            }
-
-                            // Action Buttons
-                            if (bleManager.connectedDevice.value != null && bleManager.state.value != TransferState.TRANSFERRING) {
-                                Divider(modifier = Modifier.padding(vertical = 10.dp))
-                                Button(
-                                    onClick = { bleManager.startTransfer() },
-                                    enabled = true // Adjust based on your logic
-                                ) {
-                                    Text("Start File Transfer")
-                                }
-                                Divider(modifier = Modifier.padding(vertical = 10.dp))
-                            }
+                            Divider(modifier = Modifier.padding(vertical = 10.dp))
                         }
                     }
                     Box(

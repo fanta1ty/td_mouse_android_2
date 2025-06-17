@@ -1,33 +1,29 @@
 package com.sg.aimouse.presentation.screen.localfile
 
 import android.Manifest
-import java.net.URLConnection
-
 import android.content.Context
 import android.content.Intent
+import android.os.Environment
+import android.util.Log
+import android.widget.Toast
+import androidx.annotation.RequiresPermission
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import com.sg.aimouse.model.File
+import com.sg.aimouse.service.BLEService
+import com.sg.aimouse.service.BluetoothDevice
+import com.sg.aimouse.service.implementation.BLEServiceSingleton
 import com.sg.aimouse.service.implementation.LocalFileServiceImpl
-import com.sg.aimouse.service.implementation.SambaServiceImpl.TransferStats
+import com.sg.aimouse.service.implementation.PermissionServiceImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.net.URLConnection
 import java.io.File as JavaFile
-import android.os.Environment
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import android.widget.Toast
-import android.util.Log
-import androidx.annotation.RequiresPermission
-import com.sg.aimouse.common.AiMouseSingleton
-import com.sg.aimouse.service.BLEService
-import com.sg.aimouse.service.BluetoothDevice
-import com.sg.aimouse.service.implementation.BLEFileTransferManager
-import com.sg.aimouse.service.implementation.BLEServiceSingleton
-import com.sg.aimouse.service.implementation.PermissionServiceImpl
 
 class LocalFileViewModel(
     private val context: Context
@@ -35,7 +31,6 @@ class LocalFileViewModel(
     private val localFileService = LocalFileServiceImpl(context)
     private val bleService: BLEService = BLEServiceSingleton.getInstance(context)
     private val permissionService = PermissionServiceImpl()
-    private val bleManager = BLEFileTransferManager(context)
 
     // Delegate to services
     private val _localFileDelegate = localFileService
@@ -47,16 +42,15 @@ class LocalFileViewModel(
     fun openFolder(folderPath: String) = _localFileDelegate.openFolder(folderPath)
     fun deleteFile(filePath: String) = _localFileDelegate.deleteFile(filePath)
 
-    var lastTransferStats: TransferStats? = null
-        private set
-    var showTransferDialog = mutableStateOf(false)
-    var lastTransferredFileName: String? = null
-
     var currentLocalPath by mutableStateOf(
         Environment.getExternalStorageDirectory().path
     )
         private set
 
+    // BLE device list
+    private val _discoveredDevices = mutableStateOf<List<BluetoothDevice>>(emptyList())
+    val discoveredDevices: List<BluetoothDevice>
+        get() = _discoveredDevices.value
 
     init {
         currentLocalPath = getCurrentFolderPath()
@@ -95,29 +89,37 @@ class LocalFileViewModel(
                     withContext(Dispatchers.Main) {
                         try {
                             val intent = Intent(Intent.ACTION_VIEW)
-                            val javaFile = java.io.File(file.path)
+                            val javaFile = JavaFile(file.path)
                             val uri = FileProvider.getUriForFile(
                                 context,
                                 "${context.packageName}.provider",
                                 javaFile
                             )
-                            intent.setDataAndType(uri, URLConnection.guessContentTypeFromName(file.fileName))
+                            val mimeType = URLConnection.guessContentTypeFromName(file.fileName)
+                            intent.setDataAndType(uri, mimeType)
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                             context.startActivity(intent)
                         } catch (e: Exception) {
-                            Log.e(AiMouseSingleton.DEBUG_TAG, "Error opening local media file", e)
-                            Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+                            Log.e("LocalFileViewModel", "Error opening file: ${e.message}")
+                            Toast.makeText(
+                                context,
+                                "Cannot open this file type",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(AiMouseSingleton.DEBUG_TAG, "Error in IO thread while opening local media file", e)
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Error opening file: ${e.message}", Toast.LENGTH_LONG).show()
+                        Log.e("LocalFileViewModel", "Error opening file: ${e.message}")
+                        Toast.makeText(
+                            context,
+                            "Error opening file",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
-        } else if (file.isDirectory) {
-            openLocalFolder(file)
         }
     }
 
@@ -134,29 +136,34 @@ class LocalFileViewModel(
         bleService.disconnect()
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
-    fun startBLEScanning() {
-        bleManager.startScanning()
-    }
-    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
-    fun stopBLEScanning() {
-        bleManager.stopScanning()
-    }
-
-    fun connectedDevice (): BluetoothDevice? {
+    fun connectedDevice(): BluetoothDevice? {
         return bleService.getConnectedDevice()
     }
 
-    fun readBleCharacteristic(uuid: String, callback: (ByteArray) -> Unit) {
-        bleService.readCharacteristic(uuid, callback)
+    fun stopScanningDevices() {
+        // Stop scanning by passing empty callback
+        bleService.scanForDevices { }
+    }
+
+    fun startScanning() {
+        // Start scanning and update discovered devices
+        bleService.scanForDevices { devices ->
+            _discoveredDevices.value = devices
+        }
     }
 
     fun scanForBluetoothDevices(callback: (List<BluetoothDevice>) -> Unit) {
         if (permissionService.hasBluetoothPermission(context)) {
-            bleService.scanForDevices(callback)
+            bleService.scanForDevices { devices ->
+                _discoveredDevices.value = devices
+                callback(devices)
+            }
         } else {
             permissionService.requestPermissions(context, permissionService.requiredBluetoothPermissions, {
-                bleService.scanForDevices(callback)
+                bleService.scanForDevices { devices ->
+                    _discoveredDevices.value = devices
+                    callback(devices)
+                }
             }, {
                 Log.e("LocalfileViewModel", "Bluetooth permissions denied")
                 callback(emptyList())
@@ -172,10 +179,7 @@ class LocalFileViewModel(
         bleService.registerConnectionStateCallback(callback)
     }
 
-
     override fun onCleared() {
-        bleService.unregisterConnectionStateCallback()
-        bleService.disconnect()
         super.onCleared()
     }
 }
