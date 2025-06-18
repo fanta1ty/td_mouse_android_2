@@ -83,46 +83,6 @@ fun HomeScreen(navController: NavController? = null) {
     val remoteSwipeRefreshState = rememberSwipeRefreshState(isRefreshingRemote)
     val localSwipeRefreshState = rememberSwipeRefreshState(isRefreshingLocal)
 
-    // BLE related states
-    var showBLEScanDialog by remember { mutableStateOf(false) }
-    var showBluetoothEnableDialog by remember { mutableStateOf(false) }
-    var isScanning by remember { mutableStateOf(false) }
-    var foundDevices by remember { mutableStateOf<List<BluetoothDevice>>(emptyList()) }
-    var isConnecting by remember { mutableStateOf(false) }
-
-    // Trạng thái kết nối BLE
-    var bleConnected by remember { mutableStateOf(viewModel.isBleConnected()) }
-    var smbConnected by remember { mutableStateOf(viewModel.isSMBConnected()) }
-
-    fun checkBluetoothConnection() {
-        if (!viewModel.isBluetoothEnabled()) {
-            showBluetoothEnableDialog = true
-        } else if (!viewModel.isBleConnected()) {
-            showBLEScanDialog = true
-        }
-    }
-
-    // Check BLE connection on start
-    LaunchedEffect(Unit) {
-        checkBluetoothConnection()
-        // Đăng ký callback theo dõi trạng thái kết nối BLE
-        viewModel.registerBleConnectionCallback { connected ->
-            bleConnected = connected
-        }
-    }
-
-    // Theo dõi trạng thái kết nối BLE và chuyển màn hình khi kết nối thành công
-    LaunchedEffect(bleConnected) {
-        if (bleConnected && navController != null) {
-            // Đóng dialog scan nếu đang hiển thị
-            showBLEScanDialog = false
-            if (!smbConnected) {
-                navController.navigate(Screen.ConnectionScreen.route)
-            }
-        }
-    }
-
-
     val transferProgress = viewModel.transferProgress
     val transferSpeed = viewModel.transferSpeed
     val isTransferring = viewModel.isTransferringFileSMB
@@ -159,8 +119,6 @@ fun HomeScreen(navController: NavController? = null) {
             when (event) {
                 Lifecycle.Event.ON_START -> {
                     stateHolder.requestStoragePermission()
-                    // Check BLE connection on resume
-                    checkBluetoothConnection()
                 }
                 Lifecycle.Event.ON_STOP -> stateHolder.viewModel.updateSMBState(SMBState.DISCONNECTED)
                 else -> Unit
@@ -168,168 +126,6 @@ fun HomeScreen(navController: NavController? = null) {
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
-    }
-
-    // Bluetooth Enable Dialog
-    if (showBluetoothEnableDialog) {
-        Dialog(onDismissRequest = { showBluetoothEnableDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(R.string.bluetooth_disabled),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = stringResource(R.string.bluetooth_disabled_desc),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Button(
-                            onClick = { showBluetoothEnableDialog = false },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
-                            )
-                        ) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-
-                        Button(
-                            onClick = {
-                                // Mở cài đặt Bluetooth
-                                val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-                                activity.startActivity(intent)
-                                showBluetoothEnableDialog = false
-                            }
-                        ) {
-                            Text(stringResource(android.R.string.ok))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // BLE Scan Dialog
-    if (showBLEScanDialog && !bleConnected) {
-        Dialog(onDismissRequest = { showBLEScanDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(R.string.scan_ble_devices),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (isScanning) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.scanning_ble_devices),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else if (foundDevices.isNotEmpty()) {
-                        Text(
-                            text = stringResource(R.string.ble_device_found),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp)
-                        ) {
-                            items(foundDevices) { device ->
-                                Button(
-                                    onClick = {
-                                        isConnecting = true
-                                        viewModel.connectToBluetoothDevice(device) { success ->
-                                            isConnecting = false
-                                            if (success) {
-                                                // Đóng dialog scan nếu đang hiển thị
-                                                showBLEScanDialog = false
-                                                // Chuyển sang màn hình ConnectionScreen
-                                                navController?.navigate(Screen.ConnectionScreen.route)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    enabled = !isConnecting
-                                ) {
-                                    Text(device.name ?: device.address)
-                                }
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.ble_no_devices_found),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Button(
-                            onClick = {
-                                isScanning = true
-                                foundDevices = emptyList()
-                                viewModel.scanForBluetoothDevices { devices ->
-                                    foundDevices = devices
-                                    isScanning = false
-                                }
-                            },
-                            enabled = !isScanning && !isConnecting
-                        ) {
-                            Text(stringResource(R.string.scan_ble_devices))
-                        }
-                        Button(
-                            onClick = { showBLEScanDialog = false },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
-                            )
-                        ) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-                    }
-                }
-            }
-        }
     }
 
     Scaffold { innerPaddings ->
@@ -378,17 +174,6 @@ fun HomeScreen(navController: NavController? = null) {
                                     start = 16.dp,
                                     top = 3.dp,
                                     bottom = 3.dp
-                                )
-                            )
-                            Text(
-                                text = if (bleConnected) "BLE Connected" else "BLE Disconnected",
-                                color = if (bleConnected) Color.Green else Color.Red,
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(
-                                    start = 16.dp,
-                                    top = 3.dp,
-                                    bottom = 3.dp,
-                                    end = 16.dp
                                 )
                             )
                         }

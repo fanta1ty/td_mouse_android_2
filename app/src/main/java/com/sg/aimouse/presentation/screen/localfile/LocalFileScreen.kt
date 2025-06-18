@@ -5,7 +5,6 @@ package com.sg.aimouse.presentation.screen.localfile
 import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Environment
-import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.Divider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -47,7 +47,6 @@ import androidx.navigation.NavController
 import com.sg.aimouse.presentation.screen.localfile.state.LocalfileStateHolder
 import com.sg.aimouse.service.BluetoothDevice
 import androidx.compose.runtime.remember
-import com.sg.aimouse.presentation.navigation.Screen
 
 @SuppressLint("MissingPermission")
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -57,7 +56,6 @@ fun LocalFileScreen(navController: NavController? = null) {
     val activity = LocalActivity.current
 
     var showDevicesDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     val viewModel: LocalFileViewModel = viewModel(
         factory = viewModelFactory { LocalFileViewModel(activity) }
@@ -231,20 +229,11 @@ fun LocalFileScreen(navController: NavController? = null) {
                 ) {
                     Text(
                         text = "Available BLE Devices",
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier
-                            .background(
-                                color = Color(0xFFCCCCCC),
-                                shape = RoundedCornerShape(
-                                    topStart = 12.dp,
-                                    topEnd = 12.dp,
-                                    bottomStart = 0.dp,
-                                    bottomEnd = 0.dp
-                                )
-                            )
-                            .fillMaxWidth()
-                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                            .padding(top = 12.dp, bottom = 12.dp)
                     )
+                    Divider()
                     Spacer(modifier = Modifier.height(12.dp))
                     if (viewModel.discoveredDevices.isEmpty()) {
                         Box(

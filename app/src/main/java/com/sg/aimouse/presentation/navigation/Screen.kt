@@ -4,6 +4,4 @@ sealed class Screen(val route: String) {
     data object ConnectionScreen : Screen("connection")
     data object HomeScreen : Screen("home")
     data object LocalFileScreen : Screen("localile")
-    data object BLETestScreen : Screen("ble_test")
-    data object TransferScreen : Screen("transfer")
 }

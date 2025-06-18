@@ -122,15 +122,6 @@ fun ConnectionScreen(
             }
 
             Spacer(modifier = Modifier.height(24.dp))
-            // Nút mở BLE test screen
-            OutlinedButton(
-                onClick = {
-                    navController.navigate(Screen.BLETestScreen.route)
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("BLE test")
-            }
         }
 
         // Show ProgressDialog when connecting

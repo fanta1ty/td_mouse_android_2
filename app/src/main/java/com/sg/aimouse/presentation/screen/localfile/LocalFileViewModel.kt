@@ -1,12 +1,10 @@
 package com.sg.aimouse.presentation.screen.localfile
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
 import android.util.Log
 import android.widget.Toast
-import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -143,13 +141,6 @@ class LocalFileViewModel(
     fun stopScanningDevices() {
         // Stop scanning by passing empty callback
         bleService.scanForDevices { }
-    }
-
-    fun startScanning() {
-        // Start scanning and update discovered devices
-        bleService.scanForDevices { devices ->
-            _discoveredDevices.value = devices
-        }
     }
 
     fun scanForBluetoothDevices(callback: (List<BluetoothDevice>) -> Unit) {

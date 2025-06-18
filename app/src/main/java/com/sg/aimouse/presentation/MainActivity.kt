@@ -18,8 +18,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.sg.aimouse.presentation.component.LocalActivity
 import com.sg.aimouse.presentation.navigation.Screen
-import com.sg.aimouse.presentation.screen.bletest.BLETestScreen
-import com.sg.aimouse.presentation.screen.bletransfer.BLEFileTransferApp
 import com.sg.aimouse.presentation.screen.connect.ConnectionScreen
 import com.sg.aimouse.presentation.screen.home.HomeScreen
 import com.sg.aimouse.presentation.screen.localfile.LocalFileScreen
@@ -59,15 +57,13 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         NavHost(
                             navController = navController,
-                            startDestination = Screen.LocalFileScreen.route
+                            startDestination = Screen.ConnectionScreen.route
                         ) {
                             composable(Screen.ConnectionScreen.route) {
                                 ConnectionScreen(navController = navController)
                             }
                             composable(Screen.HomeScreen.route) { HomeScreen(navController = navController) }
                             composable(Screen.LocalFileScreen.route) { LocalFileScreen(navController = navController) }
-                            composable(Screen.BLETestScreen.route) { BLETestScreen(navController = navController) }
-                            composable(Screen.TransferScreen.route) { BLEFileTransferApp(navController = navController) }
                         }
                     }
                 }
