@@ -90,13 +90,32 @@ fun LocalFileScreen(navController: NavController? = null) {
 
     // BLE connection status
     var bleConnected by remember { mutableStateOf(viewModel.isBleConnected()) }
+    
+    // Register for BLE connection state changes
+    DisposableEffect(Unit) {
+        val connectionCallback: (Boolean) -> Unit = { isConnected ->
+            bleConnected = isConnected
+        }
+        viewModel.registerBleConnectionCallback(connectionCallback)
+        onDispose {
+            // Clean up if needed
+        }
+    }
 
     fun checkBluetoothConnection() {
         if (!viewModel.isBluetoothEnabled()) {
             showBluetoothEnableDialog = true
         } else if (!viewModel.isBleConnected()) {
-            showBLEScanDialog = true
+//            showBLEScanDialog = true
+            viewModel.scanForBluetoothDevices { }
+            showDevicesDialog = true
         }
+    }
+
+    fun cancelScanBLE() {
+        isScanning = false
+        isConnecting = false
+        foundDevices = emptyList()
     }
 
     // Check BLE connection on start
@@ -197,109 +216,6 @@ fun LocalFileScreen(navController: NavController? = null) {
         }
     }
 
-    // BLE Scan Dialog
-    if (showBLEScanDialog) {
-        Dialog(onDismissRequest = { showBLEScanDialog = false }) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = stringResource(R.string.scan_ble_devices),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    if (isScanning) {
-                        CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.scanning_ble_devices),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    } else if (foundDevices.isNotEmpty()) {
-                        Text(
-                            text = stringResource(R.string.ble_device_found),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(max = 200.dp)
-                        ) {
-                            items(foundDevices) { device ->
-                                Button(
-                                    onClick = {
-                                        isConnecting = true
-                                        viewModel.connectToBluetoothDevice(device) { success ->
-                                            isConnecting = false
-                                            if (success) {
-                                                // Close the scan dialog
-                                                showBLEScanDialog = false
-                                                // Navigate to ConnectionScreen
-                                                navController?.navigate(Screen.ConnectionScreen.route)
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    enabled = !isConnecting
-                                ) {
-                                    Text(device.name ?: device.address)
-                                }
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(R.string.ble_no_devices_found),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Button(
-                            onClick = {
-                                isScanning = true
-                                foundDevices = emptyList()
-                                viewModel.scanForBluetoothDevices { devices ->
-                                    foundDevices = devices
-                                    isScanning = false
-                                }
-                            },
-                            enabled = !isScanning && !isConnecting
-                        ) {
-                            Text(stringResource(R.string.scan_ble_devices))
-                        }
-                        Button(
-                            onClick = { showBLEScanDialog = false },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Gray
-                            )
-                        ) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // TD Mouse Device Selection Dialog
     if (showDevicesDialog) {
@@ -310,33 +226,57 @@ fun LocalFileScreen(navController: NavController? = null) {
             Card {
                 Column(
                     modifier = Modifier
-                        .padding(16.dp)
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Available BLE Devices", style = MaterialTheme.typography.titleLarge)
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Available BLE Devices",
+                        style = MaterialTheme.typography.titleLarge,
+                        modifier = Modifier
+                            .background(
+                                color = Color(0xFFCCCCCC),
+                                shape = RoundedCornerShape(
+                                    topStart = 12.dp,
+                                    topEnd = 12.dp,
+                                    bottomStart = 0.dp,
+                                    bottomEnd = 0.dp
+                                )
+                            )
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     if (viewModel.discoveredDevices.isEmpty()) {
-                        Text("Scanning for TD devices...")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(0.1f)
+                                .background(Color.Transparent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(color = Color.Blue)
+                        }
                     } else {
                         LazyColumn {
                             items(viewModel.discoveredDevices) { device ->
-                                TextButton(
+                                Button(
                                     onClick = {
                                         viewModel.connectToBluetoothDevice(device) { }
                                         viewModel.stopScanningDevices()
                                         showDevicesDialog = false
-                                    }
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp, horizontal = 16.dp),
                                 ) {
                                     Row {
                                         Icon(
                                             imageVector = Icons.Default.Share,
                                             contentDescription = null,
-                                            tint = Color.Blue
+                                            tint = Color.White
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Column {
-                                            Text(device.name ?: "Unknown Device", style = MaterialTheme.typography.titleMedium)
-                                            Text(device.address, style = MaterialTheme.typography.bodySmall)
+                                            Text(device.name ?: device.address, style = MaterialTheme.typography.titleMedium)
                                         }
                                     }
                                 }
@@ -349,7 +289,7 @@ fun LocalFileScreen(navController: NavController? = null) {
                             viewModel.stopScanningDevices()
                             showDevicesDialog = false
                         },
-                        modifier = Modifier.align(Alignment.End)
+                        modifier = Modifier.align(Alignment.End).padding(end = 16.dp, bottom = 16.dp)
                     ) {
                         Text("Cancel")
                     }
@@ -410,9 +350,12 @@ fun LocalFileScreen(navController: NavController? = null) {
                                     onClick = {
                                         if (viewModel.connectedDevice() != null) {
                                             viewModel.bleDisconnect()
+                                            bleConnected = false
+                                            cancelScanBLE()
                                         } else {
                                             viewModel.scanForBluetoothDevices { }
                                             showDevicesDialog = true
+//                                            showBLEScanDialog = true
                                         }
                                     }
                                 ) {
