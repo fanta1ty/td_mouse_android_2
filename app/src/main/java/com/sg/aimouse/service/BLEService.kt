@@ -1,5 +1,7 @@
 package com.sg.aimouse.service
 
+import android.bluetooth.BluetoothGattCharacteristic
+
 interface BLEService {
 
     fun scanForDevices(callback: (List<BluetoothDevice>) -> Unit)
@@ -19,6 +21,10 @@ interface BLEService {
     fun isBluetoothEnabled(): Boolean
 
     fun readCharacteristic(uuid: String, callback: (ByteArray) -> Unit)
+
+    fun findCharacteristic(uuid: String): BluetoothGattCharacteristic?
+
+    fun writeCharacteristic(characteristic: BluetoothGattCharacteristic, data: ByteArray, callback: (Boolean) -> Unit)
 }
 
 data class BluetoothDevice(

@@ -17,6 +17,7 @@ import com.sg.aimouse.service.implementation.BLEServiceSingleton
 import com.sg.aimouse.service.implementation.LocalFileServiceImpl
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
 import com.sg.aimouse.util.BlePreferences
+import com.sg.aimouse.util.WifiConnector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,6 +28,11 @@ import java.io.File as JavaFile
 class LocalFileViewModel(
     private val context: Context
 ) : ViewModel() {
+    companion object {
+        private const val DEVICE_CONTROL_CHARACTERISTIC_UUID = "FFEB"
+        private const val WAKE_UP_COMMAND: Byte = 0x05
+    }
+
     private val localFileService = LocalFileServiceImpl(context)
     private val bleService: BLEService = BLEServiceSingleton.getInstance(context)
     private val permissionService = PermissionServiceImpl()
@@ -183,8 +189,38 @@ class LocalFileViewModel(
         bleService.connectToDevice(device) { success ->
             if (success) {
                 BlePreferences.saveDevice(context, device)
+                // Send wake up command
+                sendWakeUpCommand { wakeUpSuccess ->
+                    if (wakeUpSuccess) {
+                        // Connect to TD Mouse WiFi
+                        WifiConnector.connectToTDMouseWifi(context) { wifiSuccess ->
+                            if (!wifiSuccess) {
+                                Log.e("LocalFileViewModel", "Failed to connect to TD Mouse WiFi")
+                            }
+                        }
+                    } else {
+                        Log.e("LocalFileViewModel", "Failed to send wake up command")
+                    }
+                }
             }
             callback(success)
+        }
+    }
+
+    private fun sendWakeUpCommand(callback: (Boolean) -> Unit) {
+        try {
+            val characteristic = bleService.findCharacteristic(DEVICE_CONTROL_CHARACTERISTIC_UUID)
+            if (characteristic != null) {
+                val command = byteArrayOf(WAKE_UP_COMMAND)
+                bleService.writeCharacteristic(characteristic, command) { success ->
+                    callback(success)
+                }
+            } else {
+                callback(false)
+            }
+        } catch (e: Exception) {
+            Log.e("LocalFileViewModel", "Error sending wake up command: ${e.message}")
+            callback(false)
         }
     }
 

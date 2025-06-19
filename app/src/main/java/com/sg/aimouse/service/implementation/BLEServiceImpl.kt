@@ -445,4 +445,59 @@ class BLEServiceImpl(private val context: Context) : BLEService {
                     ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         }
     }
+
+    override fun findCharacteristic(uuid: String): BluetoothGattCharacteristic? {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "No BLUETOOTH_CONNECT permission")
+                return null
+            }
+        }
+
+        bluetoothGatt?.services?.forEach { service ->
+            service.characteristics.forEach { characteristic ->
+                if (characteristic.uuid.toString().uppercase().endsWith(uuid.uppercase())) {
+                    return characteristic
+                }
+            }
+        }
+        return null
+    }
+
+    override fun writeCharacteristic(characteristic: BluetoothGattCharacteristic, data: ByteArray, callback: (Boolean) -> Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "No BLUETOOTH_CONNECT permission")
+                callback(false)
+                return
+            }
+        }
+
+        try {
+            // Set the write type based on the characteristic properties
+            val writeType = if (characteristic.properties and BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE != 0) {
+                BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE
+            } else {
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                bluetoothGatt?.writeCharacteristic(characteristic, data, writeType)?.let { status ->
+                    callback(status == BluetoothGatt.GATT_SUCCESS)
+                } ?: callback(false)
+            } else {
+                @Suppress("DEPRECATION")
+                characteristic.writeType = writeType
+                @Suppress("DEPRECATION")
+                characteristic.value = data
+                @Suppress("DEPRECATION")
+                bluetoothGatt?.writeCharacteristic(characteristic)?.let { success ->
+                    callback(success)
+                } ?: callback(false)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error writing characteristic: ${e.message}")
+            callback(false)
+        }
+    }
 }
