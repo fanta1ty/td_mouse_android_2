@@ -104,9 +104,18 @@ fun LocalFileScreen(navController: NavController? = null) {
         if (!viewModel.isBluetoothEnabled()) {
             showBluetoothEnableDialog = true
         } else if (!viewModel.isBleConnected()) {
-//            showBLEScanDialog = true
-            viewModel.scanForBluetoothDevices { }
-            showDevicesDialog = true
+            val savedDevice = viewModel.getSavedDevice()
+            if (savedDevice != null) {
+                viewModel.connectToBluetoothDevice(savedDevice) { success ->
+                    if (!success) {
+                        viewModel.scanForBluetoothDevices { }
+                        showDevicesDialog = true
+                    }
+                }
+            } else {
+                viewModel.scanForBluetoothDevices { }
+                showDevicesDialog = true
+            }
         }
     }
 
@@ -284,6 +293,32 @@ fun LocalFileScreen(navController: NavController? = null) {
                     }
                 }
             }
+        }
+    }
+
+    // Monitor auto-connection state
+    var isAutoConnecting by remember { mutableStateOf(true) }
+
+    // Effect to handle auto-connection when the screen is created
+    LaunchedEffect(Unit) {
+        if (viewModel.isBluetoothEnabled()) {
+            isAutoConnecting = true
+            val savedDevice = viewModel.getSavedDevice()
+            if (savedDevice != null) {
+                viewModel.connectToBluetoothDevice(savedDevice) { success ->
+                    isAutoConnecting = false
+                    if (!success) {
+                        // only if the user has not manually connected to a device
+                        showBLEScanDialog = true
+                    }
+                }
+            } else {
+                isAutoConnecting = false
+                showBLEScanDialog = true
+            }
+        } else {
+            isAutoConnecting = false
+            showBluetoothEnableDialog = true
         }
     }
 

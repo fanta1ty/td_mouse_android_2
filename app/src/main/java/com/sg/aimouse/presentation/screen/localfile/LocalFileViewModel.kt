@@ -16,6 +16,7 @@ import com.sg.aimouse.service.BluetoothDevice
 import com.sg.aimouse.service.implementation.BLEServiceSingleton
 import com.sg.aimouse.service.implementation.LocalFileServiceImpl
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
+import com.sg.aimouse.util.BlePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -52,6 +53,21 @@ class LocalFileViewModel(
 
     init {
         currentLocalPath = getCurrentFolderPath()
+        // Try to auto-connect to saved device
+        autoConnectToSavedDevice()
+    }
+
+    private fun autoConnectToSavedDevice() {
+        if (bleService.isBluetoothEnabled()) {
+            val savedDevice = BlePreferences.getSavedDevice(context)
+            if (savedDevice != null) {
+                connectToBluetoothDevice(savedDevice) { success ->
+                    if (!success) {
+                        BlePreferences.clearSavedDevice(context)
+                    }
+                }
+            }
+        }
     }
 
     fun openLocalFolder(folder: File) {
@@ -132,6 +148,7 @@ class LocalFileViewModel(
 
     fun bleDisconnect() {
         bleService.disconnect()
+        BlePreferences.clearSavedDevice(context)
     }
 
     fun connectedDevice(): BluetoothDevice? {
@@ -163,11 +180,28 @@ class LocalFileViewModel(
     }
 
     fun connectToBluetoothDevice(device: BluetoothDevice, callback: (Boolean) -> Unit) {
-        bleService.connectToDevice(device, callback)
+        bleService.connectToDevice(device) { success ->
+            if (success) {
+                BlePreferences.saveDevice(context, device)
+            }
+            callback(success)
+        }
     }
 
     fun registerBleConnectionCallback(callback: (Boolean) -> Unit) {
-        bleService.registerConnectionStateCallback(callback)
+        bleService.registerConnectionStateCallback { connected ->
+            if (connected) {
+                val device = bleService.getConnectedDevice()
+                if (device != null) {
+                    BlePreferences.saveDevice(context, device)
+                }
+            }
+            callback(connected)
+        }
+    }
+
+    fun getSavedDevice(): BluetoothDevice? {
+        return BlePreferences.getSavedDevice(context)
     }
 
     override fun onCleared() {
