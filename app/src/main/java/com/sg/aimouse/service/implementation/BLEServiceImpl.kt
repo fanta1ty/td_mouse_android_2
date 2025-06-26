@@ -247,6 +247,9 @@ class BLEServiceImpl(private val context: Context) : BLEService {
     }
     
     override fun connectToDevice(device: AppBluetoothDevice, callback: (Boolean) -> Unit) {
+        // Forward the supplied callback so that connection state events reach caller (e.g. ViewModel)
+        connectionStateCallback = callback
+        Log.d(TAG, "connectToDevice: callback registered")
         if (!hasRequiredPermissions()) {
             Log.e(TAG, "Missing required Bluetooth permissions")
             callback(false)

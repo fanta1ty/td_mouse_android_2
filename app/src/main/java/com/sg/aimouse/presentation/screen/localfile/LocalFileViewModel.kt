@@ -31,6 +31,8 @@ class LocalFileViewModel(
     companion object {
         private const val DEVICE_CONTROL_CHARACTERISTIC_UUID = "FFEB"
         private const val WAKE_UP_COMMAND: Byte = 0x05
+        // Simulation flag — set to true while firmware does not yet acknowledge wake-up
+        private const val SIMULATE_WAKE_UP = true
     }
 
     private val localFileService = LocalFileServiceImpl(context)
@@ -208,6 +210,11 @@ class LocalFileViewModel(
     }
 
     private fun sendWakeUpCommand(callback: (Boolean) -> Unit) {
+        if (SIMULATE_WAKE_UP) {
+            // Simulate successful wake-up so that we can proceed to Wi-Fi connection
+            callback(true)
+            return
+        }
         try {
             val characteristic = bleService.findCharacteristic(DEVICE_CONTROL_CHARACTERISTIC_UUID)
             if (characteristic != null) {
