@@ -127,7 +127,6 @@ fun LocalFileScreen(navController: NavController? = null) {
 
     // Check BLE connection on start
     LaunchedEffect(Unit) {
-        checkBluetoothConnection()
         // Register callback to monitor BLE connection status
         viewModel.registerBleConnectionCallback { connected ->
             bleConnected = connected
@@ -155,14 +154,19 @@ fun LocalFileScreen(navController: NavController? = null) {
             when (event) {
                 Lifecycle.Event.ON_START -> {
                     stateHolder.requestStoragePermission()
-                    // Check BLE connection on resume
-                    checkBluetoothConnection()
                 }
                 else -> Unit
             }
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
+    }
+
+    // Trigger BLE scan after storage permission is granted
+    LaunchedEffect(stateHolder.hasStoragePermissionGranted) {
+        if (stateHolder.hasStoragePermissionGranted) {
+            checkBluetoothConnection()
+        }
     }
 
     // Bluetooth Enable Dialog

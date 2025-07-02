@@ -18,6 +18,9 @@ class LocalfileStateHolder(
     var shouldShowStoragePermissionRequiredDialog by mutableStateOf(false)
         private set
 
+    var hasStoragePermissionGranted by mutableStateOf(false)
+        private set
+
     fun requestStoragePermission() {
         if (!hasStoragePermission(activity)) {
             if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
@@ -26,6 +29,7 @@ class LocalfileStateHolder(
                     requiredStoragePermissions,
                     permissionsGrantedListener = {
                         viewModel.retrieveLocalFiles()
+                        hasStoragePermissionGranted = true
                     },
                     permissionsDeniedListener = { shouldShowStoragePermissionRequiredDialog = true }
                 )
@@ -35,6 +39,7 @@ class LocalfileStateHolder(
         } else {
             dismissStoragePermissionRequiredDialog()
             viewModel.retrieveLocalFiles()
+            hasStoragePermissionGranted = true
         }
     }
 
