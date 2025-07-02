@@ -21,6 +21,8 @@ object WifiConnector {
     private const val TAG = "WifiConnector"
     private const val SSID = "SCOM_5Gh"
     private const val PASSWORD = "trekvn2015"
+//    private const val SSID = "TD_Mouse"
+//    private const val PASSWORD = "12345678"
 
     // Timeout after which we give up on the request (ms)
     private const val REQUEST_TIMEOUT = 30_000L
@@ -35,21 +37,22 @@ object WifiConnector {
                 onResult(true)
             }
             ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.ACCESS_FINE_LOCATION) -> {
-                // Show an explanation to the user
-                // You might want to show a dialog here explaining why the permission is needed
+                pendingCallback = onResult // Store the callback
                 requestPermissions(activity)
             }
             else -> {
+                pendingCallback = onResult // Store the callback
                 requestPermissions(activity)
             }
         }
     }
 
     private fun hasRequiredPermissions(context: Context): Boolean {
-        return ContextCompat.checkSelfPermission(
+        val granted = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
+        return granted
     }
 
     private fun requestPermissions(activity: Activity) {
@@ -71,8 +74,9 @@ object WifiConnector {
 
     fun connectToTDMouseWifi(context: Context, callback: (Boolean) -> Unit) {
         if (!hasRequiredPermissions(context)) {
-            Log.e(TAG, "Missing required ACCESS_FINE_LOCATION permission")
+            Log.e(TAG, "Missing required ACCESS_FINE_LOCATION permission, requesting...")
             if (context is Activity) {
+                // Store the callback to be invoked after permission result
                 pendingCallback = callback
                 checkAndRequestPermissions(context) { granted ->
                     if (granted) {
@@ -119,20 +123,20 @@ object WifiConnector {
 
             val networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: android.net.Network) {
-                    Log.w(TAG, "onAvailable - Network available")
+                    Log.w(TAG, "onAvailable - Network available: $network")
                     if (timeoutPosted) mainHandler.removeCallbacks(timeoutRunnable)
                     connectivityManager.bindProcessToNetwork(network)
                     callback(true)
                 }
 
                 override fun onUnavailable() {
-                    Log.e(TAG, "onUnavailable – Wi-Fi request failed/unavailable")
+                    Log.e(TAG, "onUnavailable – Wi-Fi request failed/unavailable.")
                     if (timeoutPosted) mainHandler.removeCallbacks(timeoutRunnable)
                     callback(false)
                 }
 
                 override fun onLost(network: android.net.Network) {
-                    Log.w(TAG, "onLost – Wi-Fi network lost")
+                    Log.w(TAG, "onLost – Wi-Fi network lost: $network")
                     connectivityManager.bindProcessToNetwork(null)
                 }
             }
@@ -144,16 +148,18 @@ object WifiConnector {
                     Log.w(TAG, "Wi-Fi request timed out after ${REQUEST_TIMEOUT}ms")
                     try {
                         connectivityManager.unregisterNetworkCallback(networkCallback)
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error unregistering network callback: ${e.message}")
+                    }
                     callback(false)
                 }
                 mainHandler.postDelayed(timeoutRunnable, REQUEST_TIMEOUT)
                 timeoutPosted = true
             } catch (e: SecurityException) {
-                Log.e(TAG, "Security exception while connecting to Wi-Fi: ${e.message}")
+                Log.e(TAG, "Security exception while connecting to Wi-Fi (Android Q+): ${e.message}")
                 callback(false)
             } catch (e: Exception) {
-                Log.e(TAG, "Error connecting to Wi-Fi via requestNetwork: ${e.message}")
+                Log.e(TAG, "Error connecting to Wi-Fi via requestNetwork (Android Q+): ${e.message}")
                 callback(false)
             }
         } else {
@@ -172,13 +178,13 @@ object WifiConnector {
                         wifiManager.saveConfiguration()
                     }
                 } catch (e: SecurityException) {
-                    Log.w(TAG, "Security exception while accessing configured networks: ${e.message}")
+                    Log.w(TAG, "Security exception while accessing configured networks (legacy): ${e.message}")
                 }
 
                 @Suppress("DEPRECATION")
                 val netId = wifiManager.addNetwork(conf)
                 if (netId == -1) {
-                    Log.e(TAG, "Failed to add Wi-Fi network config")
+                    Log.e(TAG, "Failed to add Wi-Fi network config (legacy).")
                     callback(false)
                     return
                 }

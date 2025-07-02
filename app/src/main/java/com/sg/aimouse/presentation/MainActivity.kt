@@ -23,6 +23,7 @@ import com.sg.aimouse.presentation.screen.home.HomeScreen
 import com.sg.aimouse.presentation.screen.localfile.LocalFileScreen
 import com.sg.aimouse.presentation.ui.theme.AiMouseTheme
 import com.sg.aimouse.service.implementation.PermissionServiceImpl
+import com.sg.aimouse.util.WifiConnector
 
 @SuppressLint("SourceLockedOrientationActivity")
 class MainActivity : ComponentActivity() {
@@ -89,5 +90,14 @@ class MainActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putInt(mainViewModel.viewModelId.first, mainViewModel.viewModelId.second)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        WifiConnector.handlePermissionResult(requestCode, permissions, grantResults)
     }
 }
