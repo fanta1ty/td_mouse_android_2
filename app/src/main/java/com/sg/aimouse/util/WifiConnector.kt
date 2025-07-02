@@ -94,10 +94,7 @@ object WifiConnector {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val wifiManager = context.getSystemService(Context.WIFI_SERVICE) as WifiManager
 
-        Log.d(TAG, "Attempting to connect to Wi-Fi SSID=$SSID on API ${Build.VERSION.SDK_INT}")
-
         if (!wifiManager.isWifiEnabled) {
-            Log.d(TAG, "Wi-Fi disabled – enabling…")
             try {
                 @Suppress("DEPRECATION")
                 wifiManager.isWifiEnabled = true
@@ -107,8 +104,6 @@ object WifiConnector {
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10 and above
-            Log.d(TAG, "Using WifiNetworkSpecifier requestNetwork flow")
             val specifier = WifiNetworkSpecifier.Builder()
                 .setSsid(SSID)
                 .setWpa2Passphrase(PASSWORD)
@@ -116,8 +111,6 @@ object WifiConnector {
 
             val request = NetworkRequest.Builder()
                 .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-                // TD-Mouse AP has no Internet capability – declare so Android accepts it
-                .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .setNetworkSpecifier(specifier)
                 .build()
 
@@ -126,8 +119,7 @@ object WifiConnector {
 
             val networkCallback = object : ConnectivityManager.NetworkCallback() {
                 override fun onAvailable(network: android.net.Network) {
-                    Log.d(TAG, "onAvailable – Wi-Fi network acquired, binding process")
-                    // Cancel timeout once connected
+                    Log.w(TAG, "onAvailable - Network available")
                     if (timeoutPosted) mainHandler.removeCallbacks(timeoutRunnable)
                     connectivityManager.bindProcessToNetwork(network)
                     callback(true)
@@ -141,7 +133,6 @@ object WifiConnector {
 
                 override fun onLost(network: android.net.Network) {
                     Log.w(TAG, "onLost – Wi-Fi network lost")
-                    // Optional: release binding when lost
                     connectivityManager.bindProcessToNetwork(null)
                 }
             }
@@ -166,32 +157,26 @@ object WifiConnector {
                 callback(false)
             }
         } else {
-            // Below Android 10
-            Log.d(TAG, "Using legacy WifiConfiguration flow")
             try {
                 val conf = WifiConfiguration().apply {
-                    SSID = "\"$SSID\"" // quoted per API requirement
+                    SSID = "\"$SSID\""
                     preSharedKey = "\"$PASSWORD\""
                     allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK)
                 }
 
                 try {
-                    // Remove existing config for same SSID (if any)
                     @Suppress("DEPRECATION")
                     val existingId = wifiManager.configuredNetworks?.firstOrNull { it.SSID == conf.SSID }?.networkId
                     if (existingId != null) {
-                        Log.d(TAG, "Removing previous config for $SSID (id=$existingId)")
                         wifiManager.removeNetwork(existingId)
                         wifiManager.saveConfiguration()
                     }
                 } catch (e: SecurityException) {
                     Log.w(TAG, "Security exception while accessing configured networks: ${e.message}")
-                    // Continue with adding new network even if we couldn't remove old one
                 }
 
                 @Suppress("DEPRECATION")
                 val netId = wifiManager.addNetwork(conf)
-                Log.d(TAG, "addNetwork returned id=$netId")
                 if (netId == -1) {
                     Log.e(TAG, "Failed to add Wi-Fi network config")
                     callback(false)
@@ -200,10 +185,8 @@ object WifiConnector {
 
                 wifiManager.disconnect()
                 val enableOk = wifiManager.enableNetwork(netId, true)
-                Log.d(TAG, "enableNetwork result=$enableOk – reconnecting…")
                 @Suppress("DEPRECATION")
                 val reconnectOk = wifiManager.reconnect()
-                Log.d(TAG, "reconnect result=$reconnectOk")
 
                 callback(enableOk && reconnectOk)
             } catch (e: Exception) {
