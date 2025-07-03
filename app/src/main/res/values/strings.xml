@@ -47,4 +47,7 @@
     <string name="ble_no_devices_found">No TD Mouse devices found</string>
     <string name="ble_device_found">TD Mouse device found</string>
     <string name="scanning_ble_devices">Scanning for TD Mouse devices...</string>
+
+    <string name="turn_on_wifi_title">Enable Wi-Fi?</string>
+    <string name="please_turn_on_wifi">The application needs wifi enabled to connect to transfer files with the TD Mouse device. Please enable wifi in settings.</string>
 </resources>

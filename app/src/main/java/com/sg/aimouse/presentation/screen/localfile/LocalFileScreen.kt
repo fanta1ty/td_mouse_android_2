@@ -4,6 +4,8 @@ package com.sg.aimouse.presentation.screen.localfile
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.net.wifi.WifiManager
+import android.content.Context
 import android.os.Environment
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.background
@@ -46,7 +48,11 @@ import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.sg.aimouse.presentation.screen.localfile.state.LocalfileStateHolder
 import com.sg.aimouse.service.BluetoothDevice
-import androidx.compose.runtime.remember
+
+fun isWifiEnabled(context: Context): Boolean {
+    val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+    return wifiManager.isWifiEnabled
+}
 
 @SuppressLint("MissingPermission")
 @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -54,6 +60,7 @@ import androidx.compose.runtime.remember
 @Composable
 fun LocalFileScreen(navController: NavController? = null) {
     val activity = LocalActivity.current
+    val context = LocalContext.current
 
     var showDevicesDialog by remember { mutableStateOf(false) }
 
@@ -82,13 +89,14 @@ fun LocalFileScreen(navController: NavController? = null) {
     // BLE related states
     var showBLEScanDialog by remember { mutableStateOf(false) }
     var showBluetoothEnableDialog by remember { mutableStateOf(false) }
+    var showWifiEnableDialog by remember { mutableStateOf(false) }
     var isScanning by remember { mutableStateOf(false) }
     var foundDevices by remember { mutableStateOf<List<BluetoothDevice>>(emptyList()) }
     var isConnecting by remember { mutableStateOf(false) }
 
     // BLE connection status
     var bleConnected by remember { mutableStateOf(viewModel.isBleConnected()) }
-    
+
     // Register for BLE connection state changes
     DisposableEffect(Unit) {
         val connectionCallback: (Boolean) -> Unit = { isConnected ->
@@ -217,6 +225,9 @@ fun LocalFileScreen(navController: NavController? = null) {
                                 val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
                                 activity.startActivity(intent)
                                 showBluetoothEnableDialog = false
+                                if (!isWifiEnabled(context)) {
+                                    showWifiEnableDialog = true
+                                }
                             }
                         ) {
                             Text(stringResource(android.R.string.ok))
@@ -227,6 +238,62 @@ fun LocalFileScreen(navController: NavController? = null) {
         }
     }
 
+    // WiFi Enable Dialog
+    if (showWifiEnableDialog) {
+        Dialog(onDismissRequest = { showWifiEnableDialog = false }) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.turn_on_wifi_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = stringResource(R.string.please_turn_on_wifi),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Button(
+                            onClick = { showWifiEnableDialog = false },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Gray
+                            )
+                        ) {
+                            Text(stringResource(android.R.string.cancel))
+                        }
+
+                        Button(
+                            onClick = {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                                activity.startActivity(intent)
+                                showWifiEnableDialog = false
+                            }
+                        ) {
+                            Text(stringResource(android.R.string.ok))
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // TD Mouse Device Selection Dialog
     if (showDevicesDialog) {
@@ -305,7 +372,9 @@ fun LocalFileScreen(navController: NavController? = null) {
 
     // Effect to handle auto-connection when the screen is created
     LaunchedEffect(Unit) {
-        if (viewModel.isBluetoothEnabled()) {
+        if (!isWifiEnabled(context)) {
+            showWifiEnableDialog = true
+        } else if (viewModel.isBluetoothEnabled()) {
             isAutoConnecting = true
             val savedDevice = viewModel.getSavedDevice()
             if (savedDevice != null) {
