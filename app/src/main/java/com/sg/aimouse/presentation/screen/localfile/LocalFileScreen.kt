@@ -46,8 +46,12 @@ import com.sg.aimouse.presentation.component.*
 import com.sg.aimouse.util.viewModelFactory
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.sg.aimouse.presentation.navigation.Screen
 import com.sg.aimouse.presentation.screen.localfile.state.LocalfileStateHolder
 import com.sg.aimouse.service.BluetoothDevice
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 fun isWifiEnabled(context: Context): Boolean {
     val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
@@ -329,7 +333,15 @@ fun LocalFileScreen(navController: NavController? = null) {
                             items(viewModel.discoveredDevices) { device ->
                                 Button(
                                     onClick = {
-                                        viewModel.connectToBluetoothDevice(device) { }
+                                        viewModel.connectToBluetoothDevice(device) { success ->
+                                            if (success) {
+                                                CoroutineScope(Dispatchers.Main).launch {
+                                                    navController?.navigate(Screen.HomeScreen.route) {
+                                                        popUpTo(Screen.LocalFileScreen.route) { inclusive = true }
+                                                    }
+                                                }
+                                            }
+                                        }
                                         viewModel.stopScanningDevices()
                                         showDevicesDialog = false
                                     },
@@ -380,7 +392,13 @@ fun LocalFileScreen(navController: NavController? = null) {
             if (savedDevice != null) {
                 viewModel.connectToBluetoothDevice(savedDevice) { success ->
                     isAutoConnecting = false
-                    if (!success) {
+                    if (success) {
+                        CoroutineScope(Dispatchers.Main).launch {
+                            navController?.navigate(Screen.HomeScreen.route) {
+                                popUpTo(Screen.LocalFileScreen.route) { inclusive = true }
+                            }
+                        }
+                    } else {
                         // only if the user has not manually connected to a device
                         showBLEScanDialog = true
                     }

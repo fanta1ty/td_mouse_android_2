@@ -187,7 +187,7 @@ class LocalFileViewModel(
         }
     }
 
-    fun connectToBluetoothDevice(device: BluetoothDevice, callback: (Boolean) -> Unit) {
+    fun connectToBluetoothDevice(device: BluetoothDevice, onConnectionComplete: (Boolean) -> Unit) {
         bleService.connectToDevice(device) { success ->
             if (success) {
                 BlePreferences.saveDevice(context, device)
@@ -199,13 +199,16 @@ class LocalFileViewModel(
                             if (!wifiSuccess) {
                                 Log.e("LocalFileViewModel", "Failed to connect to TD Mouse WiFi")
                             }
+                            onConnectionComplete(wifiSuccess)
                         }
                     } else {
                         Log.e("LocalFileViewModel", "Failed to send wake up command")
+                        onConnectionComplete(false)
                     }
                 }
+            } else {
+                onConnectionComplete(false)
             }
-            callback(success)
         }
     }
 
