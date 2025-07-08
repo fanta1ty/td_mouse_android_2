@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -39,10 +40,8 @@ import com.sg.aimouse.presentation.screen.connect.ConnectionViewModel
 import com.sg.aimouse.presentation.screen.home.state.HomeStateHolder
 import com.sg.aimouse.service.implementation.SMBState
 import com.sg.aimouse.util.viewModelFactory
-import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import com.sg.aimouse.presentation.navigation.Screen
-import com.sg.aimouse.service.BluetoothDevice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +55,23 @@ fun HomeScreen(navController: NavController? = null) {
         factory = viewModelFactory { HomeViewModel(activity, connectionViewModel.getSambaService()) }
     )
     val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(Unit) {
+        connectionViewModel.connectSMB(
+            ipAddress = "192.168.1.1",
+            username = "smbuser",
+            password = "123456",
+            rootDir = "sambashare"
+        ) { isConnected ->
+            if (isConnected) {
+                // Optionally handle successful connection, e.g., show a toast or log
+                println("Samba connected successfully!")
+            } else {
+                // Optionally handle failed connection
+                println("Samba connection failed: ${connectionViewModel.lastErrorMessage}")
+            }
+        }
+    }
 
     val stateHolder = remember { HomeStateHolder(activity, viewModel) }
 
@@ -176,6 +192,18 @@ fun HomeScreen(navController: NavController? = null) {
                                     bottom = 3.dp
                                 )
                             )
+                            IconButton(
+                                onClick = {
+                                    navController?.navigate(Screen.ConnectionScreen.route)
+                                },
+                                modifier = Modifier.height(24.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_arrow),
+                                    contentDescription = "Samba Connect",
+                                    tint = Color.Black
+                                )
+                            }
                         }
                     }
                     if (viewModel.currentRemotePath.isNotEmpty()) {

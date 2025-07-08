@@ -156,11 +156,11 @@ class SambaServiceImpl(
     }
 
     override fun connectSMB() {
-        if (!isNetworkAvailable(context)) {
-            toast(R.string.no_internet)
-            _smbState.value = SMBState.DISCONNECTED
-            return
-        }
+//            if (!isNetworkAvailable(context)) {
+//                toast(R.string.no_internet)
+//                _smbState.value = SMBState.DISCONNECTED
+//                return
+//            }
 
         if (_smbState.value == SMBState.CONNECTED || _smbState.value == SMBState.CONNECTING)
             return

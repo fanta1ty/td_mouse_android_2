@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -502,6 +503,18 @@ fun LocalFileScreen(navController: NavController? = null) {
                                     bottom = 3.dp
                                 )
                             )
+                            IconButton(
+                                onClick = {
+                                    navController?.navigate(Screen.ConnectionScreen.route)
+                                },
+                                modifier = Modifier.height(24.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_arrow),
+                                    contentDescription = "Samba Connect",
+                                    tint = Color.Black
+                                )
+                            }
                         }
                     }
                     // Back button
