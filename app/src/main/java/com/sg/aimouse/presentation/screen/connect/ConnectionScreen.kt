@@ -31,7 +31,7 @@ fun ConnectionScreen(
         viewModelStoreOwner = activity,
         factory = viewModelFactory { ConnectionViewModel(activity) }
     )
-    var ipAddress by remember { mutableStateOf("192.168.1.32") }
+    var ipAddress by remember { mutableStateOf("192.168.1.1") }
     var username by remember { mutableStateOf("smbuser") }
     var password by remember { mutableStateOf("123456") }
     var rootDir by remember { mutableStateOf("sambashare") }

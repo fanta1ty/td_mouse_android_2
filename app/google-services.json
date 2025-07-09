@@ -1,0 +1,206 @@
+{
+  "project_info": {
+    "project_number": "942059903370",
+    "project_id": "trek-projects",
+    "storage_bucket": "trek-projects.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:942059903370:android:4407935e803e427b94d073",
+        "android_client_info": {
+          "package_name": "com.Flucard_DL"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "942059903370-3lscob4g4s45dsdsscvlvsehh6kgiqso.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.Flucard_DL",
+            "certificate_hash": "aa4559c804bef11f69529c97dabb5cbd2dd2c8a2"
+          }
+        },
+        {
+          "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLm8qpDwkkUBytIZu41OY-OCswk4R0apU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "942059903370-013p7aiemrcghcsokdfaf1oo3pb7i4fi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "thinh.nguyen.trek-td-mouse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:942059903370:android:b7df1764e9abd3a694d073",
+        "android_client_info": {
+          "package_name": "com.example.youtube_clone"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLm8qpDwkkUBytIZu41OY-OCswk4R0apU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "942059903370-013p7aiemrcghcsokdfaf1oo3pb7i4fi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "thinh.nguyen.trek-td-mouse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:942059903370:android:024998f21f90ece594d073",
+        "android_client_info": {
+          "package_name": "com.sg.aimouse"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLm8qpDwkkUBytIZu41OY-OCswk4R0apU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "942059903370-013p7aiemrcghcsokdfaf1oo3pb7i4fi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "thinh.nguyen.trek-td-mouse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:942059903370:android:0dfd783767ee293f94d073",
+        "android_client_info": {
+          "package_name": "com.sg.treksolarsolution"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLm8qpDwkkUBytIZu41OY-OCswk4R0apU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "942059903370-013p7aiemrcghcsokdfaf1oo3pb7i4fi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "thinh.nguyen.trek-td-mouse"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:942059903370:android:bf2bac428a9add9a94d073",
+        "android_client_info": {
+          "package_name": "sg.com.trekearbuds"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "942059903370-jjv907945n4o5f8atinpb0pc7d8po2ml.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "sg.com.trekearbuds",
+            "certificate_hash": "17a204e22c8a4405a34b418e83a3407e549e5b2c"
+          }
+        },
+        {
+          "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBLm8qpDwkkUBytIZu41OY-OCswk4R0apU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "942059903370-4dlhhnptbhnblo3lo1hedga3fi5fm7b1.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "942059903370-013p7aiemrcghcsokdfaf1oo3pb7i4fi.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "thinh.nguyen.trek-td-mouse"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
